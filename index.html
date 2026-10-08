@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Plantillas - Mesa Multiskill</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Modal Login / Sesión -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="login-card">
+      <h2>Ingresa tus datos</h2>
+      <p>Configuración de Asesor ADP y Usuario E</p>
+      <form id="formLogin">
+        <div class="login-field">
+          <label for="inputNombreADP">Nombre del ADP</label>
+          <input type="text" id="inputNombreADP" placeholder="Ej: BARBARA DIAZ TINTAYA" required>
+        </div>
+        <div class="login-field">
+          <label for="inputUsuarioE">Usuario E (Ej: E760644)</label>
+          <input type="text" id="inputUsuarioE" placeholder="E123456" maxlength="7" required>
+        </div>
+        <button type="submit" class="btn" style="width: 100%;">Ingresar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Advertencia de Duplicado -->
+  <div class="modal-overlay" id="duplicateModal" style="display: none;">
+    <div class="modal-card modal-warning">
+      <h3>⚠️ Plantilla Duplicada Detectada</h3>
+      <p id="duplicateMessage">Esta gestión ya fue agregada anteriormente al Bloc de Notas.</p>
+      <p><strong>¿SEGURO DE QUE DESEA AGREGAR LA PLANTILLA AL BLOCK DE NOTAS?</strong></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-danger" id="btnConfirmarDuplicado">SÍ</button>
+        <button type="button" class="btn btn-secondary" id="btnCancelarDuplicado">NO</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <h2>Mesa Multiskill HITSS - Generador de Plantillas</h2>
+    <div class="user-info">
+      <span id="labelUsuario">ADP: No conectado</span>
+      <button type="button" class="btn-logout" id="btnCerrarSesion">Salir / Cambiar</button>
+    </div>
+  </header>
+
+  <!-- Layout Principal -->
+  <div class="container">
+    
+    <!-- Columna 1: Pegar Texto de TOA -->
+    <div class="card">
+      <h3>1. Pegar Texto de TOA</h3>
+      <textarea id="rawInput" placeholder="Pega aquí el detalle completo de la actividad copiado de TOA..."></textarea>
+      <button type="button" class="btn" id="btnProcesarTOA">Procesar Texto</button>
+      
+      <!-- Campos de Vista Previa Editables / Seleccionables -->
+      <div class="data-preview">
+        <div>
+          <label class="lbl-sm" for="pvSOT">SOT:</label>
+          <input type="text" id="pvSOT" placeholder="S/N">
+        </div>
+        <div>
+          <label class="lbl-sm" for="pvTel">Teléfono:</label>
+          <input type="text" id="pvTel" placeholder="S/N">
+        </div>
+        <div style="grid-column: span 2;">
+          <label class="lbl-sm" for="pvCliente">Cliente (Seleccionable / Editable):</label>
+          <input type="text" id="pvCliente" placeholder="Nombre del cliente">
+        </div>
+        <div style="grid-column: span 2;">
+          <label class="lbl-sm" for="pvContrata">Contrata:</label>
+          <input type="text" id="pvContrata" placeholder="SAVAL">
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna 2: Generar Plantilla -->
+    <div class="card">
+      <h3>2. Generar Plantilla</h3>
+      
+      <div class="grid-2">
+        <div>
+          <label class="lbl-sm" for="selectCategoria">Categoría Principal</label>
+          <select id="selectCategoria">
+            <option value="CONFIRMA">CONFIRMAR VISITA</option>
+            <option value="CICLO">CICLO DE LLAMADAS</option>
+            <option value="REPROGRAMAR">REPROGRAMACIÓN</option>
+            <option value="RECHAZOS">RECHAZOS</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl-sm" for="selectSubcategoria">Plantilla Específica</label>
+          <select id="selectSubcategoria">
+            <!-- Se llena dinámicamente -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Formulario de Variables Dinámicas -->
+      <div id="contenedorDinamico" class="dynamic-inputs">
+        <!-- Campos generados dinámicamente desde JS -->
+      </div>
+
+      <button type="button" class="btn btn-sm" id="btnGenerarPlantilla">Generar Plantilla</button>
+
+      <textarea id="outputPlantilla" readonly placeholder="La plantilla generada aparecerá aquí..."></textarea>
+      
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-secondary" style="flex:1;" id="btnCopiarPlantilla">Copiar Plantilla</button>
+        <button type="button" class="btn btn-success" style="flex:1;" id="btnGuardarBloc">Guardar en Bloc</button>
+      </div>
+    </div>
+
+    <!-- Columna 3: Bloc de Notas / Historial -->
+    <div class="card">
+      <h3>3. Registro Diario (Bloc)</h3>
+      <div class="notepad" id="blocNotasView">Aún no hay registros guardados hoy.</div>
+      <button type="button" class="btn btn-secondary" id="btnExportarBloc">Exportar Bloc (.txt)</button>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
