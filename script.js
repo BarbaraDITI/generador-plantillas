@@ -370,6 +370,29 @@ function generarPlantilla() {
   document.getElementById('outputPlantilla').value = p;
 }
 
+/* ==========================================================================
+   FUNCIÓN DE NOTIFICACIÓN FLOTANTE (TOAST DE 3 SEGUNDOS)
+   ========================================================================== */
+
+let toastTimeout;
+
+function mostrarToast(mensaje, color = "#28a745") {
+  const toast = document.getElementById('toastNotification');
+  if (!toast) return;
+
+  // Cancelar temporizador previo si se presiona varias veces seguidas
+  clearTimeout(toastTimeout);
+
+  toast.innerText = mensaje;
+  toast.style.backgroundColor = color;
+  toast.classList.add('show');
+
+  // Ocultar automáticamente después de 3 segundos (3000 ms)
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}
+
 function copiarPlantilla() {
   const area = document.getElementById('outputPlantilla');
   if (!area || !area.value.trim()) return;
@@ -385,6 +408,10 @@ function copiarPlantilla() {
   } else {
     copiarFallback(textoLimpio);
   }
+
+   // Muestra el mensaje flotante por 3 segundos
+  mostrarToast("📋 ¡Plantilla copiada correctamente!");
+   
 }
 
 function copiarFallback(texto) {
@@ -437,17 +464,60 @@ function cancelarAgregarDuplicado() {
   document.getElementById('duplicateModal').style.display = 'none';
 }
 
+/* ==========================================================================
+   FUNCIÓN PARA LIMPIAR TODOS LOS CAMPOS AUTOMÁTICAMENTE
+   ========================================================================== */
+
+function limpiarTodosLosCampos() {
+  // 1. Limpiar área de texto de TOA
+  const rawInput = document.getElementById('rawInput');
+  if (rawInput) rawInput.value = '';
+
+  // 2. Limpiar campos de la vista previa (SOT, Teléfono, Cliente, Contrata)
+  document.getElementById('pvSOT').value = '';
+  document.getElementById('pvTel').value = '';
+  document.getElementById('pvCliente').value = '';
+  document.getElementById('pvContrata').value = '';
+
+  // 3. Limpiar variables dinámicas del formulario interno
+  const inputIDLlamada = document.getElementById('inputIDLlamada');
+  if (inputIDLlamada) inputIDLlamada.value = '';
+
+  const inputObs = document.getElementById('inputObs');
+  if (inputObs) inputObs.value = '';
+
+  const inputDetalleRechazo = document.getElementById('inputDetalleRechazo');
+  if (inputDetalleRechazo) inputDetalleRechazo.value = '';
+
+  // 4. Limpiar la plantilla generada
+  const outputPlantilla = document.getElementById('outputPlantilla');
+  if (outputPlantilla) outputPlantilla.value = '';
+
+  // 5. Resetear objeto de datos en memoria
+  clienteData = { sot: "S/N", cliente: "S/N", telefono: "S/N", contrata: "SAVAL" };
+}
+
+/* ==========================================================================
+   GUARDAR EN BLOC Y LIMPIAR (ACTUALIZADO)
+   ========================================================================== */
+
 function guardarEnBlocDirecto(textoPlantilla) {
-  const clienteData = obtenerClienteData();
+  const clienteDataActual = obtenerClienteData();
   const item = {
     id: listaGestiones.length + 1,
-    sot: clienteData.sot,
-    telefono: clienteData.telefono,
+    sot: clienteDataActual.sot,
+    telefono: clienteDataActual.telefono,
     plantilla: textoPlantilla
   };
 
   listaGestiones.push(item);
   renderizarBloc();
+   
+// Muestra la notificación flotante de guardado
+  mostrarToast("💾 ¡Plantilla guardada en el Bloc de Notas!");
+   
+  // LIMPIEZA AUTOMÁTICA DE TODOS LOS CAMPOS TRAS GUARDAR
+  limpiarTodosLosCampos();
 }
 
 function renderizarBloc() {
