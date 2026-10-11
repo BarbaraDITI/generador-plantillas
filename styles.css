@@ -221,3 +221,31 @@ input[type="text"], input[type="date"], select {
   padding: 10px;
   border-radius: 6px;
 }
+
+/* Notificación Flotante (Toast) */
+.toast {
+  visibility: hidden;
+  min-width: 250px;
+  background-color: #28a745; /* Verde de éxito */
+  color: #ffffff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 12px 20px;
+  position: fixed;
+  z-index: 9999;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
+}
+
+.toast.show {
+  visibility: visible;
+  opacity: 1;
+  bottom: 40px; /* Ligero efecto de elevación al aparecer */
+}
+
