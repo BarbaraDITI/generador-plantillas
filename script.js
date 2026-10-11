@@ -372,13 +372,35 @@ function generarPlantilla() {
 
 function copiarPlantilla() {
   const area = document.getElementById('outputPlantilla');
-  if (!area.value) {
-    alert("No hay ninguna plantilla generada para copiar.");
-    return;
+  if (!area || !area.value.trim()) return;
+
+  // 1. Normalizar saltos de línea para que pegue directo en SGA sin pasar por Teams (\r\n)
+  const textoLimpio = area.value.replace(/\r?\n/g, "\r\n");
+
+  // 2. Copia silenciosa sin mostrar ningún tipo de alert o aviso
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(textoLimpio).catch(() => {
+      copiarFallback(textoLimpio);
+    });
+  } else {
+    copiarFallback(textoLimpio);
   }
-  area.select();
-  document.execCommand('copy');
-  alert("¡Plantilla copiada al portapapeles!");
+}
+
+function copiarFallback(texto) {
+  const tempInput = document.createElement("textarea");
+  tempInput.value = texto;
+  tempInput.style.position = "fixed";
+  tempInput.style.left = "-9999px";
+  document.body.appendChild(tempInput);
+  
+  tempInput.select();
+  try {
+    document.execCommand("copy");
+  } catch (err) {
+    console.error("Error al copiar");
+  }
+  document.body.removeChild(tempInput);
 }
 
 /* ==========================================================================
