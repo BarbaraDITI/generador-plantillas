@@ -147,19 +147,26 @@ function procesarTextoTOA() {
     cliente = "S/N";
   }
 
-// 4. EXTRAER CONTRATA (Captura la palabra exacta después de INST o MANT)
-  let contrata = "SAVAL"; // Valor por defecto en caso de no hallar coincidencias
+   // 4. EXTRAER CONTRATA (PRIORIDAD: Palabra que sigue a INST, MANT o REVI)
+  let contrata = "SAVAL"; // Valor por defecto
 
-  // Busca "INST" o "MANT" seguido de espacio/s y captura la palabra que le sigue
-  const contrataMatch = text.match(/\b(?:INST|MANT)\s+([A-Z0-9]+)/i);
+  // Regla 1: Buscar la palabra inmediatamente posterior a INST, MANT, REVI o MANTENIMIENTO
+  const contrataDirectaMatch = text.match(/\b(?:INST|MANT|REVI|MANTENIMIENTO)\s+([A-Z0-9]+)/i);
 
-  if (contrataMatch && contrataMatch[1]) {
-    contrata = contrataMatch[1].toUpperCase().trim();
+  if (contrataDirectaMatch && contrataDirectaMatch[1]) {
+    contrata = contrataDirectaMatch[1].toUpperCase().trim();
   } else {
-    // Respaldo secundario con la lista de contratas por si no viene la etiqueta INST/MANT
-    const contrataFallback = actividadesYContratas(text);
-    if (contrataFallback) contrata = contrataFallback;
+    // Regla 2: Si no encuentra INST/MANT, buscar en la cabecera "Detalles de actividad"
+    const detallesMatch = text.match(/Detalles?\s+de\s+actividad[\s\S]*?\n\s*([A-Z0-9]+)/i);
+    if (detallesMatch && detallesMatch[1] && !/^(DETALLES|DATOS|VELASQUEZ|ORACLE)$/i.test(detallesMatch[1])) {
+      contrata = detallesMatch[1].toUpperCase().trim();
+    } else {
+      // Regla 3: Respaldo secundario por lista de conocidas (solo si las anteriores fallan)
+      const contrataFallback = actividadesYContratas(text);
+      if (contrataFallback) contrata = contrataFallback;
+    }
   }
+   
   }
 
   // Asignar los valores extraídos a las casillas de la vista previa
