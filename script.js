@@ -36,22 +36,25 @@ const CATEGORIAS_CONFIG = {
 document.addEventListener('DOMContentLoaded', function() {
   cargarSesionGuardada();
 
-  document.getElementById('formLogin').addEventListener('submit', function(e) {
-    e.preventDefault();
-    iniciarSesion();
-  });
-  document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);
+  const formLogin = document.getElementById('formLogin');
+  if (formLogin) {
+    formLogin.addEventListener('submit', function(e) {
+      e.preventDefault(); // Previene recarga involuntaria
+      iniciarSesion();
+    });
+  }
 
-  document.getElementById('btnProcesarTOA').addEventListener('click', procesarTextoTOA);
-  document.getElementById('selectCategoria').addEventListener('change', actualizarSubcategorias);
-  document.getElementById('selectSubcategoria').addEventListener('change', renderizarCamposDinamicos);
-  document.getElementById('btnGenerarPlantilla').addEventListener('click', generarPlantilla);
-  document.getElementById('btnCopiarPlantilla').addEventListener('click', copiarPlantilla);
-  document.getElementById('btnGuardarBloc').addEventListener('click', intentarGuardarEnBloc);
-  document.getElementById('btnExportarBloc').addEventListener('click', exportarBloc);
+  document.getElementById('btnCerrarSesion')?.addEventListener('click', cerrarSesion);
+  document.getElementById('btnProcesarTOA')?.addEventListener('click', procesarTextoTOA);
+  document.getElementById('selectCategoria')?.addEventListener('change', actualizarSubcategorias);
+  document.getElementById('selectSubcategoria')?.addEventListener('change', renderizarCamposDinamicos);
+  document.getElementById('btnGenerarPlantilla')?.addEventListener('click', generarPlantilla);
+  document.getElementById('btnCopiarPlantilla')?.addEventListener('click', copiarPlantilla);
+  document.getElementById('btnGuardarBloc')?.addEventListener('click', intentarGuardarEnBloc);
+  document.getElementById('btnExportarBloc')?.addEventListener('click', exportarBloc);
 
-  document.getElementById('btnConfirmarDuplicado').addEventListener('click', confirmarAgregarDuplicado);
-  document.getElementById('btnCancelarDuplicado').addEventListener('click', cancelarAgregarDuplicado);
+  document.getElementById('btnConfirmarDuplicado')?.addEventListener('click', confirmarAgregarDuplicado);
+  document.getElementById('btnCancelarDuplicado')?.addEventListener('click', cancelarAgregarDuplicado);
 
   actualizarSubcategorias();
 });
@@ -67,11 +70,11 @@ function iniciarSesion() {
   const regexE = /^E\d{6}$/;
 
   if (!nombre) {
-    alert("Por favor, ingresa tu nombre completo.");
+    mostrarToast("⚠️ Por favor, ingresa tu nombre completo", "#dc3545");
     return;
   }
   if (!regexE.test(codigoE)) {
-    alert("El código debe empezar con 'E' seguido de 6 números (Ejemplo: E760644).");
+    mostrarToast("⚠️ El código debe empezar con 'E' seguido de 6 números (Ej: E750344)", "#dc3545");
     return;
   }
 
@@ -81,6 +84,7 @@ function iniciarSesion() {
 
   document.getElementById('labelUsuario').innerText = `ADP: ${usuarioActual.nombre} (${usuarioActual.codigoE})`;
   document.getElementById('loginModal').style.display = 'none';
+  mostrarToast(`👋 ¡Bienvenido/a, ${nombre}!`);
 }
 
 function cargarSesionGuardada() {
@@ -106,11 +110,7 @@ function cerrarSesion() {
 }
 
 /* ==========================================================================
-   PROCESADOR DE TEXTO TOA Y LECTURA DE CLIENTE
-   ========================================================================== */
-
-/* ==========================================================================
-   PROCESADOR DE TEXTO TOA (EXTRACCIÓN MEJORADA DE CLIENTE Y CONTRATA)
+   PROCESADOR DE TEXTO TOA (EXTRACCIÓN PRECISA DE CLIENTE Y CONTRATA)
    ========================================================================== */
 
 function procesarTextoTOA() {
@@ -127,45 +127,38 @@ function procesarTextoTOA() {
   // 2. EXTRAER TELÉFONO (Busca "Telefono", "Contacto" o número que empieza con 9)
   const telMatch = text.match(/(?:Telefono|Telefono\s*Cliente|Contacto|Movil|Celular|Telefonos)\s*[:\t\r\n]*\s*(\d{7,9})/i) || text.match(/\b9\d{8}\b/);
 
-  // 3. EXTRAER CLIENTE (Exacto: Todo el texto después de "Nombre" y antes de "Tipo de Documento")
+  // 3. EXTRAER CLIENTE (Entre "Nombre" y "Tipo de Documento")
   let cliente = "S/N";
   const clienteMatch = text.match(/Nombre\s*[:\t\r\n]+\s*([\s\S]*?)(?=\s*Tipo\s*de\s*Documento)/i);
 
   if (clienteMatch && clienteMatch[1]) {
-    // Limpiar saltos de línea y espacios múltiples dentro del nombre
     cliente = clienteMatch[1].replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
   } else {
-    // Respaldos secundarios por si el texto viene resumido
     const clienteFallback = text.match(/(?:CLIENTE|Abonado|Cliente)\s*[:\t\r\n]*\s*([A-ZÁÉÍÓÚÑa-zñáéíóú\s.,]+)(?=\r|\n|$)/i);
     if (clienteFallback && clienteFallback[1]) {
       cliente = clienteFallback[1].trim();
     }
   }
 
-  // Filtrar si captura palabras de relleno
   if (/^(CLIENTE|NOMBRE|ABONADO|S\/N)$/i.test(cliente)) {
     cliente = "S/N";
   }
 
-   // 4. EXTRAER CONTRATA (PRIORIDAD: Palabra que sigue a INST, MANT o REVI)
-  let contrata = "SAVAL"; // Valor por defecto
+  // 4. EXTRAER CONTRATA (PRIORIDAD ALTA: Palabra que sigue a INST, MANT, REVI)
+  let contrata = "SAVAL";
 
-  // Regla 1: Buscar la palabra inmediatamente posterior a INST, MANT, REVI o MANTENIMIENTO
   const contrataDirectaMatch = text.match(/\b(?:INST|MANT|REVI|MANTENIMIENTO)\s+([A-Z0-9]+)/i);
 
   if (contrataDirectaMatch && contrataDirectaMatch[1]) {
     contrata = contrataDirectaMatch[1].toUpperCase().trim();
   } else {
-    // Regla 2: Si no encuentra INST/MANT, buscar en la cabecera "Detalles de actividad"
     const detallesMatch = text.match(/Detalles?\s+de\s+actividad[\s\S]*?\n\s*([A-Z0-9]+)/i);
     if (detallesMatch && detallesMatch[1] && !/^(DETALLES|DATOS|VELASQUEZ|ORACLE)$/i.test(detallesMatch[1])) {
       contrata = detallesMatch[1].toUpperCase().trim();
     } else {
-      // Regla 3: Respaldo secundario por lista de conocidas (solo si las anteriores fallan)
       const contrataFallback = actividadesYContratas(text);
       if (contrataFallback) contrata = contrataFallback;
     }
-  }
   }
 
   // Asignar los valores extraídos a las casillas de la vista previa
@@ -180,7 +173,6 @@ function procesarTextoTOA() {
   renderizarCamposDinamicos();
 }
 
-// Función auxiliar para detectar contratas conocidas de Claro/HITSS
 function actividadesYContratas(textoCompleto) {
   const contratasConocidas = [
     "INSERTEL", "SAVAL", "DOMINION", "COBRA", "LIMA TEL", 
@@ -368,7 +360,7 @@ function obtenerFechaYFranjaFormateada() {
 
 function generarPlantilla() {
   if (!usuarioActual.nombre) {
-    alert("Debes iniciar sesión primero.");
+    mostrarToast("⚠️ Debes iniciar sesión primero", "#dc3545");
     document.getElementById('loginModal').style.display = 'flex';
     return;
   }
@@ -436,14 +428,12 @@ function mostrarToast(mensaje, color = "#28a745") {
   const toast = document.getElementById('toastNotification');
   if (!toast) return;
 
-  // Cancelar temporizador previo si se presiona varias veces seguidas
   clearTimeout(toastTimeout);
 
   toast.innerText = mensaje;
   toast.style.backgroundColor = color;
   toast.classList.add('show');
 
-  // Ocultar automáticamente después de 3 segundos (3000 ms)
   toastTimeout = setTimeout(() => {
     toast.classList.remove('show');
   }, 3000);
@@ -451,12 +441,13 @@ function mostrarToast(mensaje, color = "#28a745") {
 
 function copiarPlantilla() {
   const area = document.getElementById('outputPlantilla');
-  if (!area || !area.value.trim()) return;
+  if (!area || !area.value.trim()) {
+    mostrarToast("⚠️ Genera una plantilla antes de copiar", "#dc3545");
+    return;
+  }
 
-  // 1. Normalizar saltos de línea para que pegue directo en SGA sin pasar por Teams (\r\n)
-  const textoLimpio = area.value.replace(/\r?\n/g, "\r\n");
+  const textoLimpio = area.value.replace(/\r?\n/g, "\r\n").replace(/\u200B/g, "");
 
-  // 2. Copia silenciosa sin mostrar ningún tipo de alert o aviso
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(textoLimpio).catch(() => {
       copiarFallback(textoLimpio);
@@ -465,9 +456,7 @@ function copiarPlantilla() {
     copiarFallback(textoLimpio);
   }
 
-   // Muestra el mensaje flotante por 3 segundos
   mostrarToast("📋 ¡Plantilla copiada correctamente!");
-   
 }
 
 function copiarFallback(texto) {
@@ -493,7 +482,7 @@ function copiarFallback(texto) {
 function intentarGuardarEnBloc() {
   const plantillaGen = document.getElementById('outputPlantilla').value.trim();
   if (!plantillaGen) {
-    alert("Genera una plantilla primero.");
+    mostrarToast("⚠️ Genera una plantilla primero", "#dc3545");
     return;
   }
 
@@ -525,17 +514,14 @@ function cancelarAgregarDuplicado() {
    ========================================================================== */
 
 function limpiarTodosLosCampos() {
-  // 1. Limpiar área de texto de TOA
   const rawInput = document.getElementById('rawInput');
   if (rawInput) rawInput.value = '';
 
-  // 2. Limpiar campos de la vista previa (SOT, Teléfono, Cliente, Contrata)
   document.getElementById('pvSOT').value = '';
   document.getElementById('pvTel').value = '';
   document.getElementById('pvCliente').value = '';
   document.getElementById('pvContrata').value = '';
 
-  // 3. Limpiar variables dinámicas del formulario interno
   const inputIDLlamada = document.getElementById('inputIDLlamada');
   if (inputIDLlamada) inputIDLlamada.value = '';
 
@@ -545,16 +531,12 @@ function limpiarTodosLosCampos() {
   const inputDetalleRechazo = document.getElementById('inputDetalleRechazo');
   if (inputDetalleRechazo) inputDetalleRechazo.value = '';
 
-  // 4. Limpiar la plantilla generada
   const outputPlantilla = document.getElementById('outputPlantilla');
   if (outputPlantilla) outputPlantilla.value = '';
-
-  // 5. Resetear objeto de datos en memoria
-  clienteData = { sot: "S/N", cliente: "S/N", telefono: "S/N", contrata: "SAVAL" };
 }
 
 /* ==========================================================================
-   GUARDAR EN BLOC Y LIMPIAR (ACTUALIZADO)
+   GUARDAR EN BLOC Y LIMPIAR
    ========================================================================== */
 
 function guardarEnBlocDirecto(textoPlantilla) {
@@ -568,11 +550,8 @@ function guardarEnBlocDirecto(textoPlantilla) {
 
   listaGestiones.push(item);
   renderizarBloc();
-   
-// Muestra la notificación flotante de guardado
+    
   mostrarToast("💾 ¡Plantilla guardada en el Bloc de Notas!");
-   
-  // LIMPIEZA AUTOMÁTICA DE TODOS LOS CAMPOS TRAS GUARDAR
   limpiarTodosLosCampos();
 }
 
@@ -593,7 +572,7 @@ function renderizarBloc() {
 
 function exportarBloc() {
   if (listaGestiones.length === 0) {
-    alert("No hay registros en el bloc para exportar.");
+    mostrarToast("⚠️ No hay registros en el bloc para exportar", "#dc3545");
     return;
   }
   const text = document.getElementById('blocNotasView').innerText;
