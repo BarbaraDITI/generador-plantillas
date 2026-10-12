@@ -166,7 +166,6 @@ function procesarTextoTOA() {
       if (contrataFallback) contrata = contrataFallback;
     }
   }
-   
   }
 
   // Asignar los valores extraídos a las casillas de la vista previa
