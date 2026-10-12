@@ -8,22 +8,21 @@
 </head>
 <body>
 
-  <!-- Modal Login / Sesión -->
-  <div class="modal-overlay" id="loginModal">
+<!-- Modal Login / Sesión -->
+  <div class="modal-overlay" id="loginModal" style="display: flex;">
     <div class="login-card">
       <h2>Ingresa tus datos</h2>
       <p>Configuración de Asesor ADP y Usuario E</p>
       
-      <!-- Se eliminó la etiqueta <form> para evitar recargas automáticas de página -->
       <div class="login-field">
         <label for="inputNombreADP">Nombre del ADP</label>
-        <input type="text" id="inputNombreADP" placeholder="Ej: BARBARA DIAZ TINTAYA" required>
+        <input type="text" id="inputNombreADP" placeholder="Ej: BARBARA DIAZ TINTAYA">
       </div>
       <div class="login-field">
         <label for="inputUsuarioE">Usuario E (Ej: E760644)</label>
-        <input type="text" id="inputUsuarioE" placeholder="E123456" maxlength="7" required>
+        <input type="text" id="inputUsuarioE" placeholder="E123456" maxlength="7">
       </div>
-      <button type="button" class="btn" style="width: 100%;" id="btnIngresarLogin">Ingresar</button>
+      <button type="button" class="btn" style="width: 100%; margin-top: 15px;" id="btnIngresarLogin">Ingresar</button>
     </div>
   </div>
 
