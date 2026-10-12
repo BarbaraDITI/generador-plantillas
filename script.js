@@ -147,19 +147,19 @@ function procesarTextoTOA() {
     cliente = "S/N";
   }
 
-  // 4. EXTRAER CONTRATA (Estrategia: Buscar tras "Detalle de la actividad" o "Detalles de actividad")
-  let contrata = "SAVAL"; // Valor por defecto
+// 4. EXTRAER CONTRATA (Captura la palabra exacta después de INST o MANT)
+  let contrata = "SAVAL"; // Valor por defecto en caso de no hallar coincidencias
 
-  // A) Búsqueda específica tras "Detalles de actividad" (captura la palabra de 4 o más letras tras el primer bloque/espaciado)
-  const actividadMatch = text.match(/(?:Detalle[s]?\s*de\s*actividad|Datos\s*de\s*la\s*actividad)[\s\S]*?\n\s*([A-Z0-9\s-]+?)(?=\s*,|\s*-|\r|\n)/i);
+  // Busca "INST" o "MANT" seguido de espacio/s y captura la palabra que le sigue
+  const contrataMatch = text.match(/\b(?:INST|MANT)\s+([A-Z0-9]+)/i);
 
-  if (actividadesYContratas(text)) {
-    contrata = actividadesYContratas(text);
-  } else if (actividadMatch && actividadMatch[1]) {
-    const posibleContrata = actividadMatch[1].trim();
-    if (posibleContrata.length >= 3) {
-      contrata = posibleContrata;
-    }
+  if (contrataMatch && contrataMatch[1]) {
+    contrata = contrataMatch[1].toUpperCase().trim();
+  } else {
+    // Respaldo secundario con la lista de contratas por si no viene la etiqueta INST/MANT
+    const contrataFallback = actividadesYContratas(text);
+    if (contrataFallback) contrata = contrataFallback;
+  }
   }
 
   // Asignar los valores extraídos a las casillas de la vista previa
