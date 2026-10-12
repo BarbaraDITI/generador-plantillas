@@ -38,13 +38,14 @@ const CATEGORIAS_CONFIG = {
 document.addEventListener('DOMContentLoaded', function() {
   cargarSesionGuardada();
 
-  const formLogin = document.getElementById('formLogin');
-  if (formLogin) {
-    formLogin.addEventListener('submit', function(e) {
-      e.preventDefault(); // Previene recarga involuntaria
-      iniciarSesion();
-    });
+  const btnIngresar = document.getElementById('btnIngresarLogin');
+  if (btnIngresar) {
+    btnIngresar.addEventListener('click', iniciarSesion);
   }
+
+  document.getElementById('inputUsuarioE')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') iniciarSesion();
+  });
 
   document.getElementById('btnCerrarSesion')?.addEventListener('click', cerrarSesion);
   document.getElementById('btnProcesarTOA')?.addEventListener('click', procesarTextoTOA);
@@ -112,7 +113,7 @@ function cerrarSesion() {
 }
 
 /* ==========================================================================
-   PROCESADOR DE TEXTO TOA (EXTRACCIÓN PRECISA DE CLIENTE Y CONTRATA)
+   PROCESADOR DE TEXTO TOA (EXTRACCIÓN AUTOMÁTICA COMPLETA)
    ========================================================================== */
 
 function procesarTextoTOA() {
@@ -123,13 +124,13 @@ function procesarTextoTOA() {
     return;
   }
 
-  // 1. EXTRAER SOT (Busca "SOT" o secuencia de 8-9 dígitos)
+  // 1. EXTRAER SOT
   const sotMatch = text.match(/(?:SOT|sot|Nro SOT|N° SOT|Orden)\s*[:\t\r\n]*\s*(\d+)/i) || text.match(/\b\d{8,9}\b/);
 
-  // 2. EXTRAER TELÉFONO (Busca "Telefono", "Contacto" o número que empieza con 9)
+  // 2. EXTRAER TELÉFONO
   const telMatch = text.match(/(?:Telefono|Telefono\s*Cliente|Contacto|Movil|Celular|Telefonos)\s*[:\t\r\n]*\s*(\d{7,9})/i) || text.match(/\b9\d{8}\b/);
 
-  // 3. EXTRAER CLIENTE (Entre "Nombre" y "Tipo de Documento")
+  // 3. EXTRAER CLIENTE
   let cliente = "S/N";
   const clienteMatch = text.match(/Nombre\s*[:\t\r\n]+\s*([\s\S]*?)(?=\s*Tipo\s*de\s*Documento)/i);
 
@@ -146,7 +147,7 @@ function procesarTextoTOA() {
     cliente = "S/N";
   }
 
-  // 4. EXTRAER CONTRATA (PRIORIDAD ALTA: Palabra que sigue a INST, MANT, REVI)
+  // 4. EXTRAER CONTRATA
   let contrata = "SAVAL";
 
   const contrataDirectaMatch = text.match(/\b(?:INST|MANT|REVI|MANTENIMIENTO)\s+([A-Z0-9]+)/i);
@@ -161,9 +162,9 @@ function procesarTextoTOA() {
       const contrataFallback = actividadesYContratas(text);
       if (contrataFallback) contrata = contrataFallback;
     }
+  }
 
-// 5. EXTRAER FECHA Y FRANJA HORARIA DE TOA
-  // Busca patrones como "10/10/26", "10/10/2026", o fechas en bloques de programación
+  // 5. EXTRAER FECHA Y FRANJA HORARIA AUTOMÁTICAMENTE
   const fechaMatch = text.match(/(?:Fecha\s*de\s*Programacion|Fecha)\s*[:\t\r\n]*\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i) || text.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/);
 
   if (fechaMatch && fechaMatch[1]) {
@@ -172,21 +173,21 @@ function procesarTextoTOA() {
       let dia = partes[0].padStart(2, '0');
       let mes = partes[1].padStart(2, '0');
       let anio = partes[2].length === 2 ? `20${partes[2]}` : partes[2];
-      fechaToaPorDefecto = `${anio}-${mes}-${dia}`; // Formato YYYY-MM-DD para el <input type="date">
+      fechaToaPorDefecto = `${anio}-${mes}-${dia}`;
     }
   } else {
     fechaToaPorDefecto = new Date().toISOString().split('T')[0];
   }
 
-  // Detectar franja horaria de TOA si viene mencionada (AM0, AM1, PM1, PM2, PM3)
+  // Buscar si la franja horaria viene en el texto de TOA (AM0, AM1, PM1, PM2, PM3)
   const franjaMatch = text.match(/\b(AM0|AM1|PM1|PM2|PM3)\b/i);
   if (franjaMatch) {
     franjaToaPorDefecto = franjaMatch[1].toUpperCase();
-  }
-     
+  } else {
+    franjaToaPorDefecto = "AM1";
   }
 
-  // Asignar los valores extraídos a las casillas de la vista previa
+  // Asignar los valores a las casillas de vista previa
   const sot = sotMatch ? (sotMatch[1] || sotMatch[0]) : "S/N";
   const telefono = telMatch ? (telMatch[1] || telMatch[0]) : "S/N";
 
@@ -195,7 +196,9 @@ function procesarTextoTOA() {
   document.getElementById('pvCliente').value = cliente;
   document.getElementById('pvContrata').value = contrata;
 
+  // Actualizar los campos dinámicos con la fecha y franja extraídas
   renderizarCamposDinamicos();
+  mostrarToast("✅ Datos de TOA procesados correctamente");
 }
 
 function actividadesYContratas(textoCompleto) {
@@ -223,7 +226,7 @@ function obtenerClienteData() {
 }
 
 /* ==========================================================================
-   DYNAMIC FORM CONTROLS
+   DYNAMIC FORM CONTROLS (FECHA Y FRANJA POR DEFECTO PERO EDITABLE)
    ========================================================================== */
 
 function actualizarSubcategorias() {
@@ -271,6 +274,31 @@ function renderizarCamposDinamicos() {
         <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
       </div>
     `;
+  } else if (subcat === 'CICLO_CONTACTO') {
+    html += `
+      <div>
+        <label class="lbl-sm">Ciclo Nro</label>
+        <input type="text" id="inputCiclo" value="1">
+      </div>
+      <div>
+        <label class="lbl-sm">Cant. Llamadas</label>
+        <input type="text" id="inputCantLlamadas" value="4">
+      </div>
+      <div>
+        <label class="lbl-sm">Sub-Motivo</label>
+        <select id="selectSubmotivo">
+          <option value="No contesta">No contesta</option>
+          <option value="Buzón de voz">Buzón de voz</option>
+          <option value="Número no existe">Número no existe</option>
+          <option value="Apagado">Apagado</option>
+          <option value="Corta llamada">Corta llamada</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl-sm">ID Llamada</label>
+        <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
+      </div>
+    `;
   } else if (subcat.startsWith('REPRO_')) {
     const esClaro = subcat === 'REPRO_CLARO';
     html += `
@@ -313,25 +341,38 @@ function renderizarCamposDinamicos() {
         <input type="text" id="inputObs" placeholder="Observaciones adicionales...">
       </div>
     `;
+  } else if (subcat.startsWith('RECH_')) {
+    html += `
+      <div>
+        <label class="lbl-sm">ID Llamada / Código</label>
+        <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
+      </div>
+      <div>
+        <label class="lbl-sm">SOT Duplicada / Detalle</label>
+        <input type="text" id="inputDetalleRechazo" placeholder="Ej: SOT duplicada 12345 / Sin facilidades">
+      </div>
+      <div style="grid-column: span 2;">
+        <label class="lbl-sm">Sustento / Observación</label>
+        <input type="text" id="inputObs" placeholder="Motivo detallado del rechazo...">
+      </div>
+    `;
   }
-
-  // ... (resto de subcategorías como CICLO o RECHAZOS)
 
   html += '</div>';
   contenedor.innerHTML = html;
 
-  // Asignación automática de los valores extraídos de TOA a los controles (pero editables por el usuario)
+  // Asignación automática de Fecha extraída
   const inputFecha = document.getElementById('inputFecha');
   if (inputFecha) {
     inputFecha.value = fechaToaPorDefecto || new Date().toISOString().split('T')[0];
   }
 
+  // Asignación automática de Franja extraída
   const selectFranja = document.getElementById('selectFranja');
   if (selectFranja && franjaToaPorDefecto) {
     selectFranja.value = franjaToaPorDefecto;
   }
 }
-
 
 /* ==========================================================================
    HELPERS & GENERACIÓN DE PLANTILLAS
