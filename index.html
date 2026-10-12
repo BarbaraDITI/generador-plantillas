@@ -13,17 +13,17 @@
     <div class="login-card">
       <h2>Ingresa tus datos</h2>
       <p>Configuración de Asesor ADP y Usuario E</p>
-      <form id="formLogin">
-        <div class="login-field">
-          <label for="inputNombreADP">Nombre del ADP</label>
-          <input type="text" id="inputNombreADP" placeholder="Ej: BARBARA DIAZ TINTAYA" required>
-        </div>
-        <div class="login-field">
-          <label for="inputUsuarioE">Usuario E (Ej: E760644)</label>
-          <input type="text" id="inputUsuarioE" placeholder="E123456" maxlength="7" required>
-        </div>
-        <button type="submit" class="btn" style="width: 100%;">Ingresar</button>
-      </form>
+      
+      <!-- Se eliminó la etiqueta <form> para evitar recargas automáticas de página -->
+      <div class="login-field">
+        <label for="inputNombreADP">Nombre del ADP</label>
+        <input type="text" id="inputNombreADP" placeholder="Ej: BARBARA DIAZ TINTAYA" required>
+      </div>
+      <div class="login-field">
+        <label for="inputUsuarioE">Usuario E (Ej: E760644)</label>
+        <input type="text" id="inputUsuarioE" placeholder="E123456" maxlength="7" required>
+      </div>
+      <button type="button" class="btn" style="width: 100%;" id="btnIngresarLogin">Ingresar</button>
     </div>
   </div>
 
@@ -32,7 +32,7 @@
     <div class="modal-card modal-warning">
       <h3>⚠️ Plantilla Duplicada Detectada</h3>
       <p id="duplicateMessage">Esta gestión ya fue agregada anteriormente al Bloc de Notas.</p>
-      <p><strong>¿SEGURO DE QUE DESEA AGREGAR LA PLANTILLA AL BLOCK DE NOTAS?</strong></p>
+      <p><strong>¿SEGURO DE QUE DESEA AGREGAR LA PLANTILLA AL BLOC DE NOTAS?</strong></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-danger" id="btnConfirmarDuplicado">SÍ</button>
         <button type="button" class="btn btn-secondary" id="btnCancelarDuplicado">NO</button>
@@ -125,15 +125,10 @@
 
   </div>
 
-  <script src="script.js"></script>
-
   <!-- Notificación Flotante (Toast) -->
   <div id="toastNotification" class="toast">Texto copiado</div>
 
+  <!-- Carga única de JavaScript al final -->
   <script src="script.js"></script>
-</body>
-</html>
-
-
 </body>
 </html>
