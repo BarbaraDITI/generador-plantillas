@@ -5,6 +5,8 @@
 let usuarioActual = { nombre: "", codigoE: "" };
 let listaGestiones = [];
 let plantillaPendiente = null;
+let fechaToaPorDefecto = "";
+let franjaToaPorDefecto = "AM1";
 
 const CATEGORIAS_CONFIG = {
   CONFIRMA: [
@@ -36,11 +38,23 @@ const CATEGORIAS_CONFIG = {
 document.addEventListener('DOMContentLoaded', function() {
   cargarSesionGuardada();
 
-  const formLogin = document.getElementById('formLogin');
-  if (formLogin) {
-    formLogin.addEventListener('submit', function(e) {
-      e.preventDefault(); // Previene recarga involuntaria
+  // Escuchar evento click directo sobre el botón "Ingresar"
+  const btnIngresar = document.getElementById('btnIngresarLogin');
+  if (btnIngresar) {
+    btnIngresar.addEventListener('click', function(e) {
+      e.preventDefault();
       iniciarSesion();
+    });
+  }
+
+  // Permitir presionar "Enter" dentro de las casillas del Login sin recargar la página
+  const inputE = document.getElementById('inputUsuarioE');
+  if (inputE) {
+    inputE.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        iniciarSesion();
+      }
     });
   }
 
@@ -64,8 +78,13 @@ document.addEventListener('DOMContentLoaded', function() {
    ========================================================================== */
 
 function iniciarSesion() {
-  const nombre = document.getElementById('inputNombreADP').value.trim();
-  const codigoE = document.getElementById('inputUsuarioE').value.trim().toUpperCase();
+  const inputNombre = document.getElementById('inputNombreADP');
+  const inputE = document.getElementById('inputUsuarioE');
+
+  if (!inputNombre || !inputE) return;
+
+  const nombre = inputNombre.value.trim();
+  const codigoE = inputE.value.trim().toUpperCase();
 
   const regexE = /^E\d{6}$/;
 
@@ -82,8 +101,12 @@ function iniciarSesion() {
   localStorage.setItem('adpNombre', nombre);
   localStorage.setItem('adpCodigoE', codigoE);
 
-  document.getElementById('labelUsuario').innerText = `ADP: ${usuarioActual.nombre} (${usuarioActual.codigoE})`;
-  document.getElementById('loginModal').style.display = 'none';
+  const labelUser = document.getElementById('labelUsuario');
+  if (labelUser) labelUser.innerText = `ADP: ${usuarioActual.nombre} (${usuarioActual.codigoE})`;
+
+  const modalLogin = document.getElementById('loginModal');
+  if (modalLogin) modalLogin.style.display = 'none';
+
   mostrarToast(`👋 ¡Bienvenido/a, ${nombre}!`);
 }
 
@@ -93,24 +116,35 @@ function cargarSesionGuardada() {
 
   if (n && e) {
     usuarioActual = { nombre: n, codigoE: e };
-    document.getElementById('inputNombreADP').value = n;
-    document.getElementById('inputUsuarioE').value = e;
-    document.getElementById('labelUsuario').innerText = `ADP: ${n} (${e})`;
-    document.getElementById('loginModal').style.display = 'none';
+    const inputNombre = document.getElementById('inputNombreADP');
+    const inputE = document.getElementById('inputUsuarioE');
+    if (inputNombre) inputNombre.value = n;
+    if (inputE) inputE.value = e;
+
+    const labelUser = document.getElementById('labelUsuario');
+    if (labelUser) labelUser.innerText = `ADP: ${n} (${e})`;
+
+    const modalLogin = document.getElementById('loginModal');
+    if (modalLogin) modalLogin.style.display = 'none';
   } else {
-    document.getElementById('loginModal').style.display = 'flex';
+    const modalLogin = document.getElementById('loginModal');
+    if (modalLogin) modalLogin.style.display = 'flex';
   }
 }
 
 function cerrarSesion() {
   localStorage.removeItem('adpNombre');
   localStorage.removeItem('adpCodigoE');
-  document.getElementById('labelUsuario').innerText = "ADP: No conectado";
-  document.getElementById('loginModal').style.display = 'flex';
+  
+  const labelUser = document.getElementById('labelUsuario');
+  if (labelUser) labelUser.innerText = "ADP: No conectado";
+
+  const modalLogin = document.getElementById('loginModal');
+  if (modalLogin) modalLogin.style.display = 'flex';
 }
 
 /* ==========================================================================
-   PROCESADOR DE TEXTO TOA (EXTRACCIÓN PRECISA DE CLIENTE Y CONTRATA)
+   PROCESADOR DE TEXTO TOA (EXTRACCIÓN AUTOMÁTICA)
    ========================================================================== */
 
 function procesarTextoTOA() {
@@ -121,13 +155,13 @@ function procesarTextoTOA() {
     return;
   }
 
-  // 1. EXTRAER SOT (Busca "SOT" o secuencia de 8-9 dígitos)
+  // 1. EXTRAER SOT
   const sotMatch = text.match(/(?:SOT|sot|Nro SOT|N° SOT|Orden)\s*[:\t\r\n]*\s*(\d+)/i) || text.match(/\b\d{8,9}\b/);
 
-  // 2. EXTRAER TELÉFONO (Busca "Telefono", "Contacto" o número que empieza con 9)
+  // 2. EXTRAER TELÉFONO
   const telMatch = text.match(/(?:Telefono|Telefono\s*Cliente|Contacto|Movil|Celular|Telefonos)\s*[:\t\r\n]*\s*(\d{7,9})/i) || text.match(/\b9\d{8}\b/);
 
-  // 3. EXTRAER CLIENTE (Entre "Nombre" y "Tipo de Documento")
+  // 3. EXTRAER CLIENTE
   let cliente = "S/N";
   const clienteMatch = text.match(/Nombre\s*[:\t\r\n]+\s*([\s\S]*?)(?=\s*Tipo\s*de\s*Documento)/i);
 
@@ -144,9 +178,8 @@ function procesarTextoTOA() {
     cliente = "S/N";
   }
 
-  // 4. EXTRAER CONTRATA (PRIORIDAD ALTA: Palabra que sigue a INST, MANT, REVI)
+  // 4. EXTRAER CONTRATA
   let contrata = "SAVAL";
-
   const contrataDirectaMatch = text.match(/\b(?:INST|MANT|REVI|MANTENIMIENTO)\s+([A-Z0-9]+)/i);
 
   if (contrataDirectaMatch && contrataDirectaMatch[1]) {
@@ -161,7 +194,29 @@ function procesarTextoTOA() {
     }
   }
 
-  // Asignar los valores extraídos a las casillas de la vista previa
+  // 5. EXTRAER FECHA Y FRANJA HORARIA AUTOMÁTICAMENTE
+  const fechaMatch = text.match(/(?:Fecha\s*de\s*Programacion|Fecha)\s*[:\t\r\n]*\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i) || text.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/);
+
+  if (fechaMatch && fechaMatch[1]) {
+    const partes = fechaMatch[1].split('/');
+    if (partes.length === 3) {
+      let dia = partes[0].padStart(2, '0');
+      let mes = partes[1].padStart(2, '0');
+      let anio = partes[2].length === 2 ? `20${partes[2]}` : partes[2];
+      fechaToaPorDefecto = `${anio}-${mes}-${dia}`;
+    }
+  } else {
+    fechaToaPorDefecto = new Date().toISOString().split('T')[0];
+  }
+
+  const franjaMatch = text.match(/\b(AM0|AM1|PM1|PM2|PM3)\b/i);
+  if (franjaMatch) {
+    franjaToaPorDefecto = franjaMatch[1].toUpperCase();
+  } else {
+    franjaToaPorDefecto = "AM1";
+  }
+
+  // Asignar los valores extraídos a las casillas de vista previa
   const sot = sotMatch ? (sotMatch[1] || sotMatch[0]) : "S/N";
   const telefono = telMatch ? (telMatch[1] || telMatch[0]) : "S/N";
 
@@ -171,6 +226,7 @@ function procesarTextoTOA() {
   document.getElementById('pvContrata').value = contrata;
 
   renderizarCamposDinamicos();
+  mostrarToast("✅ Datos procesados correctamente");
 }
 
 function actividadesYContratas(textoCompleto) {
@@ -237,6 +293,8 @@ function renderizarCamposDinamicos() {
           <option value="AM0">AM0</option>
           <option value="AM1">AM1</option>
           <option value="PM1">PM1</option>
+          <option value="PM2">PM2</option>
+          <option value="PM3">PM3</option>
         </select>
       </div>
       <div style="grid-column: span 2;">
@@ -298,6 +356,8 @@ function renderizarCamposDinamicos() {
           <option value="AM0">AM0</option>
           <option value="AM1">AM1</option>
           <option value="PM1">PM1</option>
+          <option value="PM2">PM2</option>
+          <option value="PM3">PM3</option>
         </select>
       </div>
       <div>
@@ -329,10 +389,15 @@ function renderizarCamposDinamicos() {
   html += '</div>';
   contenedor.innerHTML = html;
 
+  // Carga automática de Fecha y Franja extraídas
   const inputFecha = document.getElementById('inputFecha');
   if (inputFecha) {
-    const hoy = new Date().toISOString().split('T')[0];
-    inputFecha.value = hoy;
+    inputFecha.value = fechaToaPorDefecto || new Date().toISOString().split('T')[0];
+  }
+
+  const selectFranja = document.getElementById('selectFranja');
+  if (selectFranja && franjaToaPorDefecto) {
+    selectFranja.value = franjaToaPorDefecto;
   }
 }
 
@@ -361,7 +426,8 @@ function obtenerFechaYFranjaFormateada() {
 function generarPlantilla() {
   if (!usuarioActual.nombre) {
     mostrarToast("⚠️ Debes iniciar sesión primero", "#dc3545");
-    document.getElementById('loginModal').style.display = 'flex';
+    const modalLogin = document.getElementById('loginModal');
+    if (modalLogin) modalLogin.style.display = 'flex';
     return;
   }
 
@@ -490,7 +556,8 @@ function intentarGuardarEnBloc() {
 
   if (esDuplicado) {
     plantillaPendiente = plantillaGen;
-    document.getElementById('duplicateModal').style.display = 'flex';
+    const modalDup = document.getElementById('duplicateModal');
+    if (modalDup) modalDup.style.display = 'flex';
   } else {
     guardarEnBlocDirecto(plantillaGen);
   }
@@ -501,12 +568,14 @@ function confirmarAgregarDuplicado() {
     guardarEnBlocDirecto(plantillaPendiente);
     plantillaPendiente = null;
   }
-  document.getElementById('duplicateModal').style.display = 'none';
+  const modalDup = document.getElementById('duplicateModal');
+  if (modalDup) modalDup.style.display = 'none';
 }
 
 function cancelarAgregarDuplicado() {
   plantillaPendiente = null;
-  document.getElementById('duplicateModal').style.display = 'none';
+  const modalDup = document.getElementById('duplicateModal');
+  if (modalDup) modalDup.style.display = 'none';
 }
 
 /* ==========================================================================
@@ -557,6 +626,8 @@ function guardarEnBlocDirecto(textoPlantilla) {
 
 function renderizarBloc() {
   const container = document.getElementById('blocNotasView');
+  if (!container) return;
+
   if (listaGestiones.length === 0) {
     container.innerText = "Aún no hay registros guardados hoy.";
     return;
@@ -575,7 +646,10 @@ function exportarBloc() {
     mostrarToast("⚠️ No hay registros en el bloc para exportar", "#dc3545");
     return;
   }
-  const text = document.getElementById('blocNotasView').innerText;
+  const container = document.getElementById('blocNotasView');
+  if (!container) return;
+
+  const text = container.innerText;
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
