@@ -109,35 +109,85 @@ function cerrarSesion() {
    PROCESADOR DE TEXTO TOA Y LECTURA DE CLIENTE
    ========================================================================== */
 
+/* ==========================================================================
+   PROCESADOR DE TEXTO TOA (EXTRACCIÓN MEJORADA DE CLIENTE Y CONTRATA)
+   ========================================================================== */
+
 function procesarTextoTOA() {
   const text = document.getElementById('rawInput').value;
 
   if (!text.trim()) {
-    alert("Por favor, pega el texto extraído de TOA.");
+    mostrarToast("⚠️ Pega el texto extraído de TOA", "#dc3545");
     return;
   }
 
-  // Búsqueda flexible de SOT
-  const sotMatch = text.match(/(?:SOT|sot|Nro SOT|N° SOT|Orden)\s*[:\t\r\n]*\s*(\d+)/i) || text.match(/\b\d{7,9}\b/);
-  // Búsqueda flexible de Teléfono
-  const telMatch = text.match(/(?:telefonosiac|Telefonos|Telefono|Contacto|Movil|Celular)\s*[:\t\r\n]*\s*(\d{7,9})/i) || text.match(/\b9\d{8}\b/);
-  // Búsqueda mejorada de Cliente (Soporta múltiples palabras y caracteres en español)
-  const clienteMatch = text.match(/(?:CLIENTE)\s*[:\t\r\n]*\s*([A-ZÁÉÍÓÚÑa-zñáéíóú\s.,]+)(?=\r|\n|$)/i);
-  // Búsqueda flexible de Contrata
-  const contrataMatch = text.match(/(?:Contrata)\s*[:\t\r\n]*\s*([^\n\r]+)/i);
+  // 1. EXTRAER SOT (Busca "SOT" o secuencia de 8-9 dígitos)
+  const sotMatch = text.match(/(?:SOT|sot|Nro SOT|N° SOT|Orden)\s*[:\t\r\n]*\s*(\d+)/i) || text.match(/\b\d{8,9}\b/);
 
+  // 2. EXTRAER TELÉFONO (Busca "Telefono", "Contacto" o número que empieza con 9)
+  const telMatch = text.match(/(?:Telefono|Telefono\s*Cliente|Contacto|Movil|Celular|Telefonos)\s*[:\t\r\n]*\s*(\d{7,9})/i) || text.match(/\b9\d{8}\b/);
+
+  // 3. EXTRAER CLIENTE (Exacto: Todo el texto después de "Nombre" y antes de "Tipo de Documento")
+  let cliente = "S/N";
+  const clienteMatch = text.match(/Nombre\s*[:\t\r\n]+\s*([\s\S]*?)(?=\s*Tipo\s*de\s*Documento)/i);
+
+  if (clienteMatch && clienteMatch[1]) {
+    // Limpiar saltos de línea y espacios múltiples dentro del nombre
+    cliente = clienteMatch[1].replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+  } else {
+    // Respaldos secundarios por si el texto viene resumido
+    const clienteFallback = text.match(/(?:CLIENTE|Abonado|Cliente)\s*[:\t\r\n]*\s*([A-ZÁÉÍÓÚÑa-zñáéíóú\s.,]+)(?=\r|\n|$)/i);
+    if (clienteFallback && clienteFallback[1]) {
+      cliente = clienteFallback[1].trim();
+    }
+  }
+
+  // Filtrar si captura palabras de relleno
+  if (/^(CLIENTE|NOMBRE|ABONADO|S\/N)$/i.test(cliente)) {
+    cliente = "S/N";
+  }
+
+  // 4. EXTRAER CONTRATA (Estrategia: Buscar tras "Detalle de la actividad" o "Detalles de actividad")
+  let contrata = "SAVAL"; // Valor por defecto
+
+  // A) Búsqueda específica tras "Detalles de actividad" (captura la palabra de 4 o más letras tras el primer bloque/espaciado)
+  const actividadMatch = text.match(/(?:Detalle[s]?\s*de\s*actividad|Datos\s*de\s*la\s*actividad)[\s\S]*?\n\s*([A-Z0-9\s-]+?)(?=\s*,|\s*-|\r|\n)/i);
+
+  if (actividadesYContratas(text)) {
+    contrata = actividadesYContratas(text);
+  } else if (actividadMatch && actividadMatch[1]) {
+    const posibleContrata = actividadMatch[1].trim();
+    if (posibleContrata.length >= 3) {
+      contrata = posibleContrata;
+    }
+  }
+
+  // Asignar los valores extraídos a las casillas de la vista previa
   const sot = sotMatch ? (sotMatch[1] || sotMatch[0]) : "S/N";
   const telefono = telMatch ? (telMatch[1] || telMatch[0]) : "S/N";
-  const cliente = clienteMatch ? clienteMatch[1].trim() : "S/N";
-  const contrata = contrataMatch ? contrataMatch[1].trim() : "SAVAL";
 
-  // Se asignan directamente a las cajas de texto de la interfaz para poder editarlas o seleccionarlas
   document.getElementById('pvSOT').value = sot;
   document.getElementById('pvTel').value = telefono;
   document.getElementById('pvCliente').value = cliente;
   document.getElementById('pvContrata').value = contrata;
 
   renderizarCamposDinamicos();
+}
+
+// Función auxiliar para detectar contratas conocidas de Claro/HITSS
+function actividadesYContratas(textoCompleto) {
+  const contratasConocidas = [
+    "INSERTEL", "SAVAL", "DOMINION", "COBRA", "LIMA TEL", 
+    "TELCOS", "COMFICA", "IIC", "CARLEI", "TELECOM", "EZENTIS", "CAM"
+  ];
+  
+  const textoUpper = textoCompleto.toUpperCase();
+  for (const c of contratasConocidas) {
+    if (textoUpper.includes(c)) {
+      return c;
+    }
+  }
+  return null;
 }
 
 function obtenerClienteData() {
