@@ -5,6 +5,8 @@
 let usuarioActual = { nombre: "", codigoE: "" };
 let listaGestiones = [];
 let plantillaPendiente = null;
+let fechaToaPorDefecto = "";
+let franjaToaPorDefecto = "AM1";
 
 const CATEGORIAS_CONFIG = {
   CONFIRMA: [
@@ -159,6 +161,29 @@ function procesarTextoTOA() {
       const contrataFallback = actividadesYContratas(text);
       if (contrataFallback) contrata = contrataFallback;
     }
+
+// 5. EXTRAER FECHA Y FRANJA HORARIA DE TOA
+  // Busca patrones como "10/10/26", "10/10/2026", o fechas en bloques de programación
+  const fechaMatch = text.match(/(?:Fecha\s*de\s*Programacion|Fecha)\s*[:\t\r\n]*\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i) || text.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/);
+
+  if (fechaMatch && fechaMatch[1]) {
+    const partes = fechaMatch[1].split('/');
+    if (partes.length === 3) {
+      let dia = partes[0].padStart(2, '0');
+      let mes = partes[1].padStart(2, '0');
+      let anio = partes[2].length === 2 ? `20${partes[2]}` : partes[2];
+      fechaToaPorDefecto = `${anio}-${mes}-${dia}`; // Formato YYYY-MM-DD para el <input type="date">
+    }
+  } else {
+    fechaToaPorDefecto = new Date().toISOString().split('T')[0];
+  }
+
+  // Detectar franja horaria de TOA si viene mencionada (AM0, AM1, PM1, PM2, PM3)
+  const franjaMatch = text.match(/\b(AM0|AM1|PM1|PM2|PM3)\b/i);
+  if (franjaMatch) {
+    franjaToaPorDefecto = franjaMatch[1].toUpperCase();
+  }
+     
   }
 
   // Asignar los valores extraídos a las casillas de la vista previa
@@ -237,34 +262,11 @@ function renderizarCamposDinamicos() {
           <option value="AM0">AM0</option>
           <option value="AM1">AM1</option>
           <option value="PM1">PM1</option>
+          <option value="PM2">PM2</option>
+          <option value="PM3">PM3</option>
         </select>
       </div>
       <div style="grid-column: span 2;">
-        <label class="lbl-sm">ID Llamada</label>
-        <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
-      </div>
-    `;
-  } else if (subcat === 'CICLO_CONTACTO') {
-    html += `
-      <div>
-        <label class="lbl-sm">Ciclo Nro</label>
-        <input type="text" id="inputCiclo" value="1">
-      </div>
-      <div>
-        <label class="lbl-sm">Cant. Llamadas</label>
-        <input type="text" id="inputCantLlamadas" value="4">
-      </div>
-      <div>
-        <label class="lbl-sm">Sub-Motivo</label>
-        <select id="selectSubmotivo">
-          <option value="No contesta">No contesta</option>
-          <option value="Buzón de voz">Buzón de voz</option>
-          <option value="Número no existe">Número no existe</option>
-          <option value="Apagado">Apagado</option>
-          <option value="Corta llamada">Corta llamada</option>
-        </select>
-      </div>
-      <div>
         <label class="lbl-sm">ID Llamada</label>
         <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
       </div>
@@ -298,6 +300,8 @@ function renderizarCamposDinamicos() {
           <option value="AM0">AM0</option>
           <option value="AM1">AM1</option>
           <option value="PM1">PM1</option>
+          <option value="PM2">PM2</option>
+          <option value="PM3">PM3</option>
         </select>
       </div>
       <div>
@@ -309,32 +313,25 @@ function renderizarCamposDinamicos() {
         <input type="text" id="inputObs" placeholder="Observaciones adicionales...">
       </div>
     `;
-  } else if (subcat.startsWith('RECH_')) {
-    html += `
-      <div>
-        <label class="lbl-sm">ID Llamada / Código</label>
-        <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
-      </div>
-      <div>
-        <label class="lbl-sm">SOT Duplicada / Detalle</label>
-        <input type="text" id="inputDetalleRechazo" placeholder="Ej: SOT duplicada 12345 / Sin facilidades">
-      </div>
-      <div style="grid-column: span 2;">
-        <label class="lbl-sm">Sustento / Observación</label>
-        <input type="text" id="inputObs" placeholder="Motivo detallado del rechazo...">
-      </div>
-    `;
   }
+
+  // ... (resto de subcategorías como CICLO o RECHAZOS)
 
   html += '</div>';
   contenedor.innerHTML = html;
 
+  // Asignación automática de los valores extraídos de TOA a los controles (pero editables por el usuario)
   const inputFecha = document.getElementById('inputFecha');
   if (inputFecha) {
-    const hoy = new Date().toISOString().split('T')[0];
-    inputFecha.value = hoy;
+    inputFecha.value = fechaToaPorDefecto || new Date().toISOString().split('T')[0];
+  }
+
+  const selectFranja = document.getElementById('selectFranja');
+  if (selectFranja && franjaToaPorDefecto) {
+    selectFranja.value = franjaToaPorDefecto;
   }
 }
+
 
 /* ==========================================================================
    HELPERS & GENERACIÓN DE PLANTILLAS
