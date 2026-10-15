@@ -1,4 +1,41 @@
 /* ==========================================================================
+   GESTIÓN DE MODO OSCURO / MODO CLARO
+   ========================================================================== */
+
+function inicializarTema() {
+  const temaGuardado = localStorage.getItem('themeADP') || 'light';
+  document.documentElement.setAttribute('data-theme', temaGuardado);
+  actualizarBotonTema(temaGuardado);
+
+  const btnTheme = document.getElementById('btnToggleTheme');
+  if (btnTheme) {
+    btnTheme.addEventListener('click', function() {
+      const temaActual = document.documentElement.getAttribute('data-theme');
+      const nuevoTema = temaActual === 'dark' ? 'light' : 'dark';
+      
+      document.documentElement.setAttribute('data-theme', nuevoTema);
+      localStorage.setItem('themeADP', nuevoTema);
+      actualizarBotonTema(nuevoTema);
+    });
+  }
+}
+
+function actualizarBotonTema(tema) {
+  const icon = document.getElementById('themeIcon');
+  const text = document.getElementById('themeText');
+  
+  if (icon && text) {
+    if (tema === 'dark') {
+      icon.innerText = '☀️';
+      text.innerText = 'Modo Claro';
+    } else {
+      icon.innerText = '🌙';
+      text.innerText = 'Modo Oscuro';
+    }
+  }
+}
+
+/*==========================================================================
    ESTADO GLOBAL Y CONFIGURACIÓN DE CATEGORÍAS
    ========================================================================== */
 
@@ -7,6 +44,42 @@ let listaGestiones = [];
 let plantillaPendiente = null;
 let fechaToaPorDefecto = "";
 let franjaToaPorDefecto = "AM1";
+
+const SUBMOTIVOS_RECHAZO = {
+  RECH_NO_DESEA_MESA: [
+    "Cliente ya tiene servicio de otro operador",
+    "Titular no ha contratado ningun servicio a Claro",
+    "Demora en la atención de la solicitud, ya no desea esperar.",
+    "Cliente no desea servicio por Motivos personales."
+  ],
+  RECH_FACILIDADES: [
+    "Dueño de Casa y/o Edificio no autoriza la instalacion.",
+    "Al momento de la instalación no hay acceso al techo",
+    "Al momento de la instalación se valida ducterias obstruidas",
+    "Cliente cuenta con sot de suspensión y/o baja"
+  ],
+  RECH_DIRECCION: [
+    "Dirección registrada en el sistema es errada. (numero, lt, mz, nombre calle, distrito)"
+  ],
+  RECH_OFERTA: [
+    "Tecnología incorrecta FTTH/HFC/OVERLAP Instalación/ Post Venta]",
+    "Velocidad de Internet no es acorde a lo solicitado por el cliente",
+    "Cantidad o Modelo de Decos no es acorde a lo solicitado por el cliente",
+    "Cliente solicito atención PostVenta (Decos adicionales, traslados, etc.)",
+    "Cliente solicita adicionar la telefonía",
+    "Decodificadores descontinuados (Básico HD, Básico, Standard, DVR)"
+  ],
+  RECH_MUDANZA: [
+    "Cliente salió de viaje y en el domicilio no tienen conocimiento de la Instalación.",
+    "Cliente no vive en esta dirección, se mudó.",
+    "Cliente indica que pronto se mudará o viajará y rechaza instalación."
+  ],
+  RECH_SISTEMA: [
+    "Sin workflow, sin tareas generadas",
+    "Campaña mal configurada, no figura etiquetas correctas",
+    "Solicitud mal generada (no genera reservas, duplicidad de números, duplicidad de etiquetas, Sin Co_id, sin CustomerID, Sin plano, etc.)"
+  ]
+};
 
 const CATEGORIAS_CONFIG = {
   CONFIRMA: [
@@ -22,12 +95,15 @@ const CATEGORIAS_CONFIG = {
     { id: 'REPRO_CLARO', nombre: 'Reprogramado por Claro' }
   ],
   RECHAZOS: [
-    { id: 'RECH_NO_DESEA_MESA', nombre: 'Cliente no desea servicio (Mesa)' },
-    { id: 'RECH_NO_DESEA_CAMPO', nombre: 'Cliente no desea servicio (Campo)' },
-    { id: 'RECH_DUPLICIDAD', nombre: 'Por Duplicidad de SOT / Pedido' },
-    { id: 'RECH_FACILIDADES', nombre: 'Sin Facilidades Técnicas' },
-    { id: 'RECH_TITULARIDAD', nombre: 'Error de Titularidad / Datos' },
-    { id: 'RECH_ZONA_PELIGROSA', nombre: 'Zona de alto riesgo / Inaccesible' }
+    { id: 'RECH_NO_DESEA_MESA', nombre: 'Cliente no desea servicio - Mesa' },
+    { id: 'RECH_DUPLICIDAD', nombre: 'Por duplicidad - Mesa' },
+    { id: 'RECH_FACILIDADES', nombre: 'Por facilidades técnicas del cliente - Mesa' },
+    { id: 'RECH_CONTACTO', nombre: 'Por falta de contacto - Mesa' },
+    { id: 'RECH_DIRECCION', nombre: 'Por mal ingreso de dirección - Mesa' },
+    { id: 'RECH_OFERTA', nombre: 'Por mala oferta - Mesa' },
+    { id: 'RECH_MUDANZA', nombre: 'Por mudanza o viaje - Mesa' },
+    { id: 'RECH_SISTEMA', nombre: 'Por SOT con errores de Sistema - Mesa' },
+    { id: 'RECH_FRAUDE', nombre: 'Por posible fraude - Mesa' }
   ]
 };
 
@@ -36,9 +112,19 @@ const CATEGORIAS_CONFIG = {
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', function() {
+  inicializarTema();
+
+  document.getElementById('btnToggleTheme')?.addEventListener('click', function() {
+    const temaActual = document.documentElement.getAttribute('data-theme');
+    const nuevoTema = temaActual === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', nuevoTema);
+    localStorage.setItem('themeADP', nuevoTema);
+    actualizarBotonTema(nuevoTema);
+  });
+
   cargarSesionGuardada();
 
-  // Escuchar evento click directo sobre el botón "Ingresar"
   const btnIngresar = document.getElementById('btnIngresarLogin');
   if (btnIngresar) {
     btnIngresar.addEventListener('click', function(e) {
@@ -47,7 +133,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Permitir presionar "Enter" dentro de las casillas del Login sin recargar la página
   const inputE = document.getElementById('inputUsuarioE');
   if (inputE) {
     inputE.addEventListener('keypress', function(e) {
@@ -144,7 +229,7 @@ function cerrarSesion() {
 }
 
 /* ==========================================================================
-   PROCESADOR DE TEXTO TOA (EXTRACCIÓN AUTOMÁTICA)
+   PROCESADOR DE TEXTO TOA (EXTRACCIÓN PRECISA DE CLIENTE Y CONTRATA)
    ========================================================================== */
 
 function procesarTextoTOA() {
@@ -161,7 +246,7 @@ function procesarTextoTOA() {
   // 2. EXTRAER TELÉFONO
   const telMatch = text.match(/(?:Telefono|Telefono\s*Cliente|Contacto|Movil|Celular|Telefonos)\s*[:\t\r\n]*\s*(\d{7,9})/i) || text.match(/\b9\d{8}\b/);
 
-  // 3. EXTRAER CLIENTE
+  // 3. EXTRAER CLIENTE (Exacto: Entre "Nombre" y "Tipo de Documento")
   let cliente = "S/N";
   const clienteMatch = text.match(/Nombre\s*[:\t\r\n]+\s*([\s\S]*?)(?=\s*Tipo\s*de\s*Documento)/i);
 
@@ -178,7 +263,7 @@ function procesarTextoTOA() {
     cliente = "S/N";
   }
 
-  // 4. EXTRAER CONTRATA
+  // 4. EXTRAER CONTRATA (PRIORIDAD ALTA: Palabra inmediata a INST o MANT)
   let contrata = "SAVAL";
   const contrataDirectaMatch = text.match(/\b(?:INST|MANT|REVI|MANTENIMIENTO)\s+([A-Z0-9]+)/i);
 
@@ -216,7 +301,7 @@ function procesarTextoTOA() {
     franjaToaPorDefecto = "AM1";
   }
 
-  // Asignar los valores extraídos a las casillas de vista previa
+  // Asignar a la vista previa
   const sot = sotMatch ? (sotMatch[1] || sotMatch[0]) : "S/N";
   const telefono = telMatch ? (telMatch[1] || telMatch[0]) : "S/N";
 
@@ -370,26 +455,111 @@ function renderizarCamposDinamicos() {
       </div>
     `;
   } else if (subcat.startsWith('RECH_')) {
-    html += `
-      <div>
-        <label class="lbl-sm">ID Llamada / Código</label>
-        <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
-      </div>
-      <div>
-        <label class="lbl-sm">SOT Duplicada / Detalle</label>
-        <input type="text" id="inputDetalleRechazo" placeholder="Ej: SOT duplicada 12345 / Sin facilidades">
-      </div>
-      <div style="grid-column: span 2;">
-        <label class="lbl-sm">Sustento / Observación</label>
-        <input type="text" id="inputObs" placeholder="Motivo detallado del rechazo...">
-      </div>
-    `;
+    const clienteData = obtenerClienteData();
+
+    if (subcat === 'RECH_DUPLICIDAD') {
+      html += `
+        <div>
+          <label class="lbl-sm">Nro. SOT Duplicada Atendida</label>
+          <input type="text" id="inputSotDuplicada" placeholder="Ej: 91501234">
+        </div>
+        <div>
+          <label class="lbl-sm">ID Llamada</label>
+          <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
+        </div>
+      `;
+    } else if (subcat === 'RECH_DIRECCION') {
+      html += `
+        <div>
+          <label class="lbl-sm">Persona que Contesta</label>
+          <input type="text" id="inputPersonaContesta" value="${clienteData.cliente}">
+        </div>
+        <div>
+          <label class="lbl-sm">ID Llamada</label>
+          <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
+        </div>
+        <div style="grid-column: span 2;">
+          <label class="lbl-sm">Dirección Correcta</label>
+          <input type="text" id="inputDireccionCorrecta" placeholder="Escribe la dirección correcta completa...">
+        </div>
+        <div style="grid-column: span 2;">
+          <label class="lbl-sm">Submotivo de Rechazo</label>
+          <select id="selectSubmotivoRechazo">
+            ${SUBMOTIVOS_RECHAZO.RECH_DIRECCION.map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+      `;
+    } else if (subcat === 'RECH_SISTEMA') {
+      html += `
+        <div style="grid-column: span 2;">
+          <label class="lbl-sm">Submotivo de Rechazo</label>
+          <select id="selectSubmotivoRechazo">
+            ${SUBMOTIVOS_RECHAZO.RECH_SISTEMA.map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="lbl-sm">Detalle Error de Sistema</label>
+          <input type="text" id="inputDetalleSistema" placeholder="Ej: Sin Co_id / Sin workflow">
+        </div>
+        <div>
+          <label class="lbl-sm">ID Llamada</label>
+          <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
+        </div>
+      `;
+    } else if (subcat === 'RECH_FRAUDE') {
+      html += `
+        <div>
+          <label class="lbl-sm">Persona que Contesta</label>
+          <input type="text" id="inputPersonaContesta" value="${clienteData.cliente}">
+        </div>
+        <div>
+          <label class="lbl-sm">ID Llamada</label>
+          <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
+        </div>
+        <div>
+          <label class="lbl-sm">Customer ID / DNI</label>
+          <input type="text" id="inputCustomerID" placeholder="Ej: 44868042">
+        </div>
+        <div>
+          <label class="lbl-sm">Autorizado Por</label>
+          <input type="text" id="inputAutorizadoPor" placeholder="Ej: SUPERVISOR JUAN PEREZ">
+        </div>
+      `;
+    } else if (subcat === 'RECH_CONTACTO') {
+      html += `
+        <div>
+          <label class="lbl-sm">Persona que Contesta</label>
+          <input type="text" id="inputPersonaContesta" value="NO RESPONDE / SIN CONTACTO">
+        </div>
+        <div>
+          <label class="lbl-sm">ID Llamada</label>
+          <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
+        </div>
+      `;
+    } else {
+      const opciones = SUBMOTIVOS_RECHAZO[subcat] || [];
+      html += `
+        <div>
+          <label class="lbl-sm">Persona que Contesta</label>
+          <input type="text" id="inputPersonaContesta" value="${clienteData.cliente}">
+        </div>
+        <div>
+          <label class="lbl-sm">ID Llamada</label>
+          <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
+        </div>
+        <div style="grid-column: span 2;">
+          <label class="lbl-sm">Submotivo de Rechazo</label>
+          <select id="selectSubmotivoRechazo">
+            ${opciones.map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+      `;
+    }
   }
 
   html += '</div>';
   contenedor.innerHTML = html;
 
-  // Carga automática de Fecha y Franja extraídas
   const inputFecha = document.getElementById('inputFecha');
   if (inputFecha) {
     inputFecha.value = fechaToaPorDefecto || new Date().toISOString().split('T')[0];
@@ -437,8 +607,9 @@ function generarPlantilla() {
   const fechaVisita = obtenerFechaYFranjaFormateada();
   const obs = v('inputObs') || "SIN OBSERVACIONES";
   const motivoDetalle = v('inputMotivoDetalle');
-  const detalleRechazo = v('inputDetalleRechazo');
-  const realizadorCompleto = `${usuarioActual.nombre.toUpperCase()} - ADP MULTISKILL HITSS`;
+  const personaContesta = v('inputPersonaContesta') || clienteData.cliente;
+  const submotivo = v('selectSubmotivoRechazo');
+  const realizadorCompleto = `${usuarioActual.nombre.toUpperCase()}ADP MULTISKILL HITSS`;
 
   let p = "";
 
@@ -462,22 +633,31 @@ function generarPlantilla() {
       p = `MESA MULTISKILL HITSS\nREPROGRAMADO EN MESA / REAGENDADO POR CLARO\nMOTIVO DE REPROGRAMACIÓN: CLARO ${motivoDetalle}\nCLIENTE: ${clienteData.cliente}\nTELÉFONO: ${clienteData.telefono}\nNUEVA FECHA Y FRANJA DE VISITA: ${fechaVisita}\nOBSERVACIÓN: ${obs}\nCONTRATA: ${clienteData.contrata}\nREALIZADO POR: ${realizadorCompleto}\nCÓD LLAMADA: ${idLlamada}`;
       break;
     case 'RECH_NO_DESEA_MESA':
-      p = `MESA MULTISKILL HITSS - RECHAZO EN MESA\nMOTIVO: CLIENTE NO DESEA EL SERVICIO\nSOT: ${clienteData.sot}\nCLIENTE: ${clienteData.cliente}\nTELÉFONO: ${clienteData.telefono}\nCONTRATA: ${clienteData.contrata}\nSUSTENTO: ${obs}\nID LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
-      break;
-    case 'RECH_NO_DESEA_CAMPO':
-      p = `MESA MULTISKILL HITSS - RECHAZO EN CAMPO\nMOTIVO: CLIENTE CANCELA EN DOMICILIO / NO DESEA\nSOT: ${clienteData.sot}\nCLIENTE: ${clienteData.cliente}\nTELÉFONO: ${clienteData.telefono}\nCONTRATA: ${clienteData.contrata}\nOBSERVACIÓN: ${obs}\nREALIZADO POR: ${realizadorCompleto}`;
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: CLIENTE NO DESEA EL SERVICIO - MESA\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
     case 'RECH_DUPLICIDAD':
-      p = `MESA MULTISKILL HITSS - RECHAZO POR DUPLICIDAD\nSOT A CANCELAR: ${clienteData.sot}\nDETALLE / SOT DUPLICADA: ${detalleRechazo}\nCLIENTE: ${clienteData.cliente}\nOBSERVACIÓN: ${obs}\nREALIZADO POR: ${realizadorCompleto}`;
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: RECHAZADO POR DUPLICIDAD\nSUBMOTIVO DE RECHAZO: se atendió con otra SOT\nSE PROCEDE AL RECHAZO DE LA SOLICITUD POR DUPLICIDAD DE SOT, SE ATENDIÓ CON LA SOT: ${v('inputSotDuplicada') || 'S/N'}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
     case 'RECH_FACILIDADES':
-      p = `MESA MULTISKILL HITSS - RECHAZO TÉCNICO\nMOTIVO: SIN FACILIDADES TÉCNICAS\nSOT: ${clienteData.sot}\nCLIENTE: ${clienteData.cliente}\nCONTRATA: ${clienteData.contrata}\nDETALLE TÉCNICO: ${detalleRechazo || obs}\nREALIZADO POR: ${realizadorCompleto}`;
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: FACILIDADES TÉCNICAS DEL CLIENTE\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
-    case 'RECH_TITULARIDAD':
-      p = `MESA MULTISKILL HITSS - RECHAZO DATOS / TITULARIDAD\nSOT: ${clienteData.sot}\nCLIENTE: ${clienteData.cliente}\nSUSTENTO: ${obs}\nREALIZADO POR: ${realizadorCompleto}`;
+    case 'RECH_CONTACTO':
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: FALTA DE CONTACTO\nSUBMOTIVO DE RECHAZO: No hay contacto con el cliente (números errados)\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
-    case 'RECH_ZONA_PELIGROSA':
-      p = `MESA MULTISKILL HITSS - RECHAZO COBERURA / ZONA RIESGO\nSOT: ${clienteData.sot}\nCLIENTE: ${clienteData.cliente}\nCONTRATA: ${clienteData.contrata}\nOBSERVACIÓN: ZONA PELIGROSA / SIN ACCESO - ${obs}\nREALIZADO POR: ${realizadorCompleto}`;
+    case 'RECH_DIRECCION':
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: MAL INGRESO DE DIRECCIÓN\nDIRECCIÓN CORRECTA: ${v('inputDireccionCorrecta') || 'S/N'}\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
+      break;
+    case 'RECH_OFERTA':
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: MALA OFERTA\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
+      break;
+    case 'RECH_MUDANZA':
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: MUDANZA O VIAJE\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
+      break;
+    case 'RECH_SISTEMA':
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nMOTIVO DEL RECHAZO: SOT CON ERRORES EN EL SISTEMA\nSUBMOTIVO DE RECHAZO: ${submotivo}\nSE PROCEDE AL RECHAZO DE LA SOLICITUD POR TENER ERRORES DE SISTEMAS: ${v('inputDetalleSistema') || 'SIN ESPECIFICAR'}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
+      break;
+    case 'RECH_FRAUDE':
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: POSIBLE FRAUDE\nSUBMOTIVO DE RECHAZO: Cliente ya tiene un servicio activo en la misma dirección\nCUSTOMER ID: ${v('inputCustomerID') || 'S/N'}\nAUTORIZADO POR: ${v('inputAutorizadoPor') || 'S/N'}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
   }
 
@@ -655,4 +835,26 @@ function exportarBloc() {
   a.href = URL.createObjectURL(blob);
   a.download = `Registro_Gestiones_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
+}
+
+
+function inicializarTema() {
+  const temaGuardado = localStorage.getItem('themeADP') || 'light';
+  document.documentElement.setAttribute('data-theme', temaGuardado);
+  actualizarBotonTema(temaGuardado);
+}
+
+function actualizarBotonTema(tema) {
+  const icon = document.getElementById('themeIcon');
+  const text = document.getElementById('themeText');
+  
+  if (icon && text) {
+    if (tema === 'dark') {
+      icon.innerText = '☀️';
+      text.innerText = 'Claro';
+    } else {
+      icon.innerText = '🌙';
+      text.innerText = 'Oscuro';
+    }
+  }
 }
