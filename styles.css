@@ -1,14 +1,54 @@
+/* ==========================================================================
+   VARIABLES Y MODO OSCURO (PALETA CLARO / HITSS)
+   ========================================================================== */
+
 :root {
-  --primary: #0d6efd;
-  --primary-hover: #0b5ed7;
+  /* Modo Claro por Defecto */
+  --bg-primary: #f4f6f9;
+  --bg-card: #ffffff;
+  --bg-header: #ffffff;
+  --text-main: #212529;
+  --text-muted: #6c757d;
+  --border-color: #dee2e6;
+  
+  --primary: #e30613;        /* Rojo Claro Corporativo */
+  --primary-hover: #b8050f;
   --danger: #dc3545;
   --danger-hover: #bb2d3b;
   --success: #198754;
-  --dark: #212529;
-  --light: #f8f9fa;
-  --border: #dee2e6;
-  --muted: #6c757d;
+  --input-bg: #ffffff;
+  --input-border: #ced4da;
+  --preview-bg: #e9ecef;
+  --notepad-bg: #fffbe6;
+  --notepad-border: #ffe58f;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
+
+[data-theme="dark"] {
+  /* Modo Oscuro Premium / Neón */
+  --bg-primary: #0f111a;
+  --bg-card: #1a1d2e;
+  --bg-header: #141724;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --border-color: #2e344e;
+  
+  --primary: #ff2a3b;        /* Rojo Neón para destacar */
+  --primary-hover: #d91b2c;
+  --danger: #e63946;
+  --danger-hover: #c1121f;
+  --success: #2ec4b6;
+  --input-bg: #10121d;
+  --input-border: #2e344e;
+  --preview-bg: #141724;
+  --notepad-bg: #121526;
+  --notepad-border: #2e344e;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   ESTILOS GENERALES Y LAYOUT
+   ========================================================================== */
 
 * {
   box-sizing: border-box;
@@ -18,84 +58,30 @@
 }
 
 body {
-  background-color: #f4f6f9;
-  color: var(--dark);
+  background-color: var(--bg-primary);
+  color: var(--text-main);
   line-height: 1.5;
-}
-
-/* Modales */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.login-card, .modal-card {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  width: 420px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-}
-
-.login-card h2 { margin-bottom: 8px; }
-.login-card p { font-size: 0.85rem; color: var(--muted); margin-bottom: 16px; }
-
-.login-field { text-align: left; margin-bottom: 12px; }
-.login-field label { font-size: 0.8rem; font-weight: bold; }
-
-.modal-warning {
-  border-top: 6px solid #ffc107;
-  text-align: center;
-}
-
-.modal-warning h3 {
-  color: #664d03;
-  margin-bottom: 12px;
-}
-
-.modal-warning p {
-  font-size: 0.9rem;
-  margin-bottom: 12px;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.modal-actions button {
-  flex: 1;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Header */
 header {
-  background: white;
-  border-bottom: 1px solid var(--border);
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-color);
   padding: 12px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: var(--shadow);
+  transition: background-color 0.3s ease;
 }
 
-.user-info { font-size: 0.9rem; font-weight: bold; }
-
-.btn-logout {
-  background: var(--danger);
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-left: 10px;
+.user-info { 
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem; 
+  font-weight: bold; 
 }
 
 /* Contenedor Principal */
@@ -115,14 +101,16 @@ header {
 }
 
 .card {
-  background: white;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   overflow-y: auto;
+  box-shadow: var(--shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .card h3 {
@@ -137,6 +125,7 @@ header {
   font-weight: bold;
   display: block;
   margin-bottom: 3px;
+  color: var(--text-muted);
 }
 
 .grid-2 {
@@ -149,17 +138,20 @@ header {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background-color: #fafafa;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px dashed var(--border);
+  background-color: var(--preview-bg);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
 }
 
+/* Entradas de Texto */
 textarea {
   width: 100%;
   height: 100%;
   padding: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--input-border);
+  background-color: var(--input-bg);
+  color: var(--text-main);
   border-radius: 6px;
   resize: none;
   font-size: 0.85rem;
@@ -171,10 +163,16 @@ textarea {
 input[type="text"], input[type="date"], select {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--input-border);
+  background-color: var(--input-bg);
+  color: var(--text-main);
   border-radius: 6px;
   font-size: 0.85rem;
-  background-color: white;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
 }
 
 /* Botones */
@@ -190,15 +188,38 @@ input[type="text"], input[type="date"], select {
 }
 
 .btn:hover { background: var(--primary-hover); }
-.btn-secondary { background: var(--muted); }
+.btn-secondary { background: var(--text-muted); }
 .btn-success { background: var(--success); }
 .btn-danger { background: var(--danger); }
 .btn-danger:hover { background: var(--danger-hover); }
 .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
 
+.btn-logout {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-theme {
+  background: var(--preview-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 /* Vista Previa */
 .data-preview {
-  background: #e9ecef;
+  background: var(--preview-bg);
   padding: 10px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -207,12 +228,10 @@ input[type="text"], input[type="date"], select {
   gap: 6px;
 }
 
-.data-preview span { font-weight: bold; }
-
 /* Bloc Notepad */
 .notepad {
-  background: #fffbe6;
-  border: 1px solid #ffe58f;
+  background: var(--notepad-bg);
+  border: 1px solid var(--notepad-border);
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.8rem;
   white-space: pre-wrap;
@@ -220,19 +239,20 @@ input[type="text"], input[type="date"], select {
   height: 100%;
   padding: 10px;
   border-radius: 6px;
+  color: var(--text-main);
 }
 
 /* Notificación Flotante (Toast) */
 .toast {
   visibility: hidden;
   min-width: 250px;
-  background-color: #28a745; /* Verde de éxito */
+  background-color: var(--success);
   color: #ffffff;
   text-align: center;
   border-radius: 6px;
   padding: 12px 20px;
   position: fixed;
-  z-index: 9999;
+  z-index: 99999;
   left: 50%;
   bottom: 30px;
   transform: translateX(-50%);
@@ -246,51 +266,44 @@ input[type="text"], input[type="date"], select {
 .toast.show {
   visibility: visible;
   opacity: 1;
-  bottom: 40px; /* Ligero efecto de elevación al aparecer */
+  bottom: 40px;
 }
 
-/* Corrección de Visibilidad del Modal Login */
+/* Modales */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.65);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10000;
 }
 
-.login-card {
-  background: #ffffff;
+.login-card, .modal-card {
+  background: var(--bg-card);
+  color: var(--text-main);
   padding: 25px 30px;
-  border-radius: 10px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
   width: 100%;
   max-width: 400px;
   text-align: center;
 }
 
-.login-field {
-  margin-bottom: 15px;
-  text-align: left;
+.modal-warning {
+  border-top: 6px solid #ffc107;
 }
 
-.login-field label {
-  display: block;
-  font-size: 13px;
-  font-weight: bold;
-  margin-bottom: 5px;
-  color: #333;
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
 }
 
-.login-field input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  box-sizing: border-box;
+.modal-actions button {
+  flex: 1;
 }
-
