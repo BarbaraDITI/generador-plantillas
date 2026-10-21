@@ -1,5 +1,42 @@
 /* ==========================================================================
-   1. ESTADO GLOBAL Y CONFIGURACIÓN DE CATEGORÍAS
+   GESTIÓN DE MODO OSCURO / MODO CLARO
+   ========================================================================== */
+
+function inicializarTema() {
+  const temaGuardado = localStorage.getItem('themeADP') || 'light';
+  document.documentElement.setAttribute('data-theme', temaGuardado);
+  actualizarBotonTema(temaGuardado);
+
+  const btnTheme = document.getElementById('btnToggleTheme');
+  if (btnTheme) {
+    btnTheme.addEventListener('click', function() {
+      const temaActual = document.documentElement.getAttribute('data-theme');
+      const nuevoTema = temaActual === 'dark' ? 'light' : 'dark';
+      
+      document.documentElement.setAttribute('data-theme', nuevoTema);
+      localStorage.setItem('themeADP', nuevoTema);
+      actualizarBotonTema(nuevoTema);
+    });
+  }
+}
+
+function actualizarBotonTema(tema) {
+  const icon = document.getElementById('themeIcon');
+  const text = document.getElementById('themeText');
+  
+  if (icon && text) {
+    if (tema === 'dark') {
+      icon.innerText = '☀️';
+      text.innerText = 'Modo Claro';
+    } else {
+      icon.innerText = '🌙';
+      text.innerText = 'Modo Oscuro';
+    }
+  }
+}
+
+/*==========================================================================
+   ESTADO GLOBAL Y CONFIGURACIÓN DE CATEGORÍAS
    ========================================================================== */
 
 let usuarioActual = { nombre: "", codigoE: "" };
@@ -7,13 +44,6 @@ let listaGestiones = [];
 let plantillaPendiente = null;
 let fechaToaPorDefecto = "";
 let franjaToaPorDefecto = "AM1";
-
-// Variables extraídas de TOA para Fuera de TOA y Habilitar Franja
-let planoExtraido = "S/N";
-let subTipoExtraido = "S/N";
-let codClienteExtraido = "S/N";
-let direccionExtraida = "S/N";
-let distritoExtraido = "S/N";
 
 const SUBMOTIVOS_RECHAZO = {
   RECH_NO_DESEA_MESA: [
@@ -65,28 +95,35 @@ const CATEGORIAS_CONFIG = {
     { id: 'REPRO_CLARO', nombre: 'Reprogramado por Claro' }
   ],
   RECHAZOS: [
-    { id: 'RECH_NO_DESEA_MESA', nombre: '1. Cliente no desea servicio - Mesa' },
-    { id: 'RECH_DUPLICIDAD', nombre: '2. Por duplicidad - Mesa' },
-    { id: 'RECH_FACILIDADES', nombre: '3. Por facilidades técnicas del cliente - Mesa' },
-    { id: 'RECH_CONTACTO', nombre: '4. Por falta de contacto - Mesa' },
-    { id: 'RECH_DIRECCION', nombre: '5. Por mal ingreso de dirección - Mesa' },
-    { id: 'RECH_OFERTA', nombre: '6. Por mala oferta - Mesa' },
-    { id: 'RECH_MUDANZA', nombre: '7. Por mudanza o viaje - Mesa' },
-    { id: 'RECH_SISTEMA', nombre: '8. Por SOT con errores de Sistema - Mesa' },
-    { id: 'RECH_FRAUDE', nombre: '9. Por posible fraude - Mesa' }
-  ],
-  FUERA_TOA: [
-    { id: 'FTOA_GENERAL', nombre: 'Plantilla Fuera de TOA' }
+    { id: 'RECH_NO_DESEA_MESA', nombre: 'Cliente no desea servicio - Mesa' },
+    { id: 'RECH_DUPLICIDAD', nombre: 'Por duplicidad - Mesa' },
+    { id: 'RECH_FACILIDADES', nombre: 'Por facilidades técnicas del cliente - Mesa' },
+    { id: 'RECH_CONTACTO', nombre: 'Por falta de contacto - Mesa' },
+    { id: 'RECH_DIRECCION', nombre: 'Por mal ingreso de dirección - Mesa' },
+    { id: 'RECH_OFERTA', nombre: 'Por mala oferta - Mesa' },
+    { id: 'RECH_MUDANZA', nombre: 'Por mudanza o viaje - Mesa' },
+    { id: 'RECH_SISTEMA', nombre: 'Por SOT con errores de Sistema - Mesa' },
+    { id: 'RECH_FRAUDE', nombre: 'Por posible fraude - Mesa' }
   ]
 };
 
 /* ==========================================================================
-   2. INICIALIZACIÓN Y EVENTOS DOM
+   INICIALIZACIÓN Y EVENTOS
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', function() {
-  cargarSesionGuardada();
   inicializarTema();
+
+  document.getElementById('btnToggleTheme')?.addEventListener('click', function() {
+    const temaActual = document.documentElement.getAttribute('data-theme');
+    const nuevoTema = temaActual === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', nuevoTema);
+    localStorage.setItem('themeADP', nuevoTema);
+    actualizarBotonTema(nuevoTema);
+  });
+
+  cargarSesionGuardada();
 
   const btnIngresar = document.getElementById('btnIngresarLogin');
   if (btnIngresar) {
@@ -106,14 +143,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  document.getElementById('btnToggleTheme')?.addEventListener('click', function() {
-    const temaActual = document.documentElement.getAttribute('data-theme');
-    const nuevoTema = temaActual === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', nuevoTema);
-    localStorage.setItem('themeADP', nuevoTema);
-    actualizarBotonTema(nuevoTema);
-  });
-
   document.getElementById('btnCerrarSesion')?.addEventListener('click', cerrarSesion);
   document.getElementById('btnProcesarTOA')?.addEventListener('click', procesarTextoTOA);
   document.getElementById('selectCategoria')?.addEventListener('change', actualizarSubcategorias);
@@ -126,28 +155,11 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btnConfirmarDuplicado')?.addEventListener('click', confirmarAgregarDuplicado);
   document.getElementById('btnCancelarDuplicado')?.addEventListener('click', cancelarAgregarDuplicado);
 
-  document.getElementById('btnCopiarHabilitar')?.addEventListener('click', function() {
-    const area = document.getElementById('outputHabilitarFranja');
-    if (!area || !area.value.trim()) return;
-
-    const textoLimpio = area.value.replace(/\r?\n/g, "\r\n");
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(textoLimpio);
-    }
-    mostrarToast("📋 Formato Habilitar Franja copiado");
-  });
-
-  document.getElementById('inputSupCargo')?.addEventListener('input', function() {
-    const clienteData = obtenerClienteData();
-    const fechaVisita = obtenerFechaYFranjaFormateada();
-    generarFormatoHabilitarFranja(clienteData.sot, planoExtraido, fechaVisita, this.value);
-  });
-
   actualizarSubcategorias();
 });
 
 /* ==========================================================================
-   3. GESTIÓN DE SESIÓN Y TEMA
+   GESTIÓN DE SESIÓN
    ========================================================================== */
 
 function iniciarSesion() {
@@ -216,29 +228,8 @@ function cerrarSesion() {
   if (modalLogin) modalLogin.style.display = 'flex';
 }
 
-function inicializarTema() {
-  const temaGuardado = localStorage.getItem('themeADP') || 'light';
-  document.documentElement.setAttribute('data-theme', temaGuardado);
-  actualizarBotonTema(temaGuardado);
-}
-
-function actualizarBotonTema(tema) {
-  const icon = document.getElementById('themeIcon');
-  const text = document.getElementById('themeText');
-  
-  if (icon && text) {
-    if (tema === 'dark') {
-      icon.innerText = '☀️';
-      text.innerText = 'Claro';
-    } else {
-      icon.innerText = '🌙';
-      text.innerText = 'Oscuro';
-    }
-  }
-}
-
 /* ==========================================================================
-   4. PROCESADOR DE TEXTO TOA (EXTRACCIÓN DE DATOS)
+   PROCESADOR DE TEXTO TOA (EXTRACCIÓN PRECISA DE CLIENTE Y CONTRATA)
    ========================================================================== */
 
 function procesarTextoTOA() {
@@ -249,13 +240,13 @@ function procesarTextoTOA() {
     return;
   }
 
-  // Extracción de SOT
+  // 1. EXTRAER SOT
   const sotMatch = text.match(/(?:SOT|sot|Nro SOT|N° SOT|Orden)\s*[:\t\r\n]*\s*(\d+)/i) || text.match(/\b\d{8,9}\b/);
 
-  // Extracción de Teléfono
+  // 2. EXTRAER TELÉFONO
   const telMatch = text.match(/(?:Telefono|Telefono\s*Cliente|Contacto|Movil|Celular|Telefonos)\s*[:\t\r\n]*\s*(\d{7,9})/i) || text.match(/\b9\d{8}\b/);
 
-  // Extracción de Cliente
+  // 3. EXTRAER CLIENTE (Exacto: Entre "Nombre" y "Tipo de Documento")
   let cliente = "S/N";
   const clienteMatch = text.match(/Nombre\s*[:\t\r\n]+\s*([\s\S]*?)(?=\s*Tipo\s*de\s*Documento)/i);
 
@@ -272,7 +263,7 @@ function procesarTextoTOA() {
     cliente = "S/N";
   }
 
-  // Extracción de Contrata
+  // 4. EXTRAER CONTRATA (PRIORIDAD ALTA: Palabra inmediata a INST o MANT)
   let contrata = "SAVAL";
   const contrataDirectaMatch = text.match(/\b(?:INST|MANT|REVI|MANTENIMIENTO)\s+([A-Z0-9]+)/i);
 
@@ -288,7 +279,7 @@ function procesarTextoTOA() {
     }
   }
 
-  // Extracción de Fecha y Franja Horaria
+  // 5. EXTRAER FECHA Y FRANJA HORARIA AUTOMÁTICAMENTE
   const fechaMatch = text.match(/(?:Fecha\s*de\s*Programacion|Fecha)\s*[:\t\r\n]*\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i) || text.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/);
 
   if (fechaMatch && fechaMatch[1]) {
@@ -310,23 +301,7 @@ function procesarTextoTOA() {
     franjaToaPorDefecto = "AM1";
   }
 
-  // Extracción de variables secundarias
-  const planoMatch = text.match(/(?:Plano)\s*[:\t\r\n]*\s*([A-Z0-9-]+)/i);
-  if (planoMatch) planoExtraido = planoMatch[1].trim();
-
-  const subTipoMatch = text.match(/(?:Sub\s*Tipo\s*de\s*Orden|Subtipo)\s*[:\t\r\n]*\s*([^\r\n]+)/i);
-  if (subTipoMatch) subTipoExtraido = subTipoMatch[1].trim();
-
-  const codClienteMatch = text.match(/(?:Código\s*de\s*Cliente|Cod\s*Cliente)\s*[:\t\r\n]*\s*(\d+)/i);
-  if (codClienteMatch) codClienteExtraido = codClienteMatch[1].trim();
-
-  const dirMatch = text.match(/(?:Direccion|Dirección)\s*[:\t\r\n]*\s*([^\r\n]+)/i);
-  if (dirMatch) direccionExtraida = dirMatch[1].trim();
-
-  const distMatch = text.match(/(?:Distrito)\s*[:\t\r\n]*\s*([^\r\n]+)/i);
-  if (distMatch) distritoExtraido = distMatch[1].trim();
-
-  // Asignar valores a la vista previa
+  // Asignar a la vista previa
   const sot = sotMatch ? (sotMatch[1] || sotMatch[0]) : "S/N";
   const telefono = telMatch ? (telMatch[1] || telMatch[0]) : "S/N";
 
@@ -364,7 +339,7 @@ function obtenerClienteData() {
 }
 
 /* ==========================================================================
-   5. CONTROLES DINÁMICOS
+   DYNAMIC FORM CONTROLS
    ========================================================================== */
 
 function actualizarSubcategorias() {
@@ -391,7 +366,7 @@ function renderizarCamposDinamicos() {
 
   let html = '<div class="grid-2">';
 
-  if (subcat.startsWith('CONF_') || subcat === 'FTOA_GENERAL') {
+  if (subcat.startsWith('CONF_')) {
     html += `
       <div>
         <label class="lbl-sm">Fecha de Visita</label>
@@ -597,7 +572,7 @@ function renderizarCamposDinamicos() {
 }
 
 /* ==========================================================================
-   6. GENERACIÓN DE PLANTILLAS Y HERRAMIENTAS
+   HELPERS & GENERACIÓN DE PLANTILLAS
    ========================================================================== */
 
 function v(id) {
@@ -634,16 +609,11 @@ function generarPlantilla() {
   const motivoDetalle = v('inputMotivoDetalle');
   const personaContesta = v('inputPersonaContesta') || clienteData.cliente;
   const submotivo = v('selectSubmotivoRechazo');
-  const supCargo = v('inputSupCargo') || "SIN ASIGNAR";
-  const realizadorCompleto = `${usuarioActual.nombre.toUpperCase()} - ADP MULTISKILL HITSS`;
+  const realizadorCompleto = `${usuarioActual.nombre.toUpperCase()}ADP MULTISKILL HITSS`;
 
   let p = "";
 
   switch (subcat) {
-    case 'FTOA_GENERAL':
-      p = `*FUERA DE TOA*\n📌 SOT: ${clienteData.sot}\n⚙️ SUB TIPO: ${subTipoExtraido}\n🏡 DIRECCIÓN: ${direccionExtraida}\n📍 DISTRITO: ${distritoExtraido}\n🛠️ SERVICIO: FTTH\n🔑 PLANO: ${planoExtraido}\n👤 CLIENTE: ${clienteData.cliente}\n🔢 COD CLIENTE: ${codClienteExtraido}\n📱 CELULAR DEL CLIENTE: ${clienteData.telefono}\n📅 FECHA Y FRANJA: ${fechaVisita}\n✍️ REALIZADO POR: ${realizadorCompleto}`;
-      break;
-
     case 'CONF_LLAMADA':
       p = `MESA MULTISKILL HITSS - CONFIRMA VISITA\nSOT: ${clienteData.sot}\nDÍA Y FRANJA: ${fechaVisita}\nCLIENTE: ${clienteData.cliente}\nNUMERO: ${clienteData.telefono}\nCONTRATA: ${clienteData.contrata}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${usuarioActual.nombre.toUpperCase()}`;
       break;
@@ -692,20 +662,10 @@ function generarPlantilla() {
   }
 
   document.getElementById('outputPlantilla').value = p;
-  generarFormatoHabilitarFranja(clienteData.sot, planoExtraido, fechaVisita, supCargo);
-}
-
-function generarFormatoHabilitarFranja(sot, plano, fechaFranja, sup) {
-  const formato = `MESA MULTISKILL HITSS - FORMATO PARA HABILITAR FRANJA\n📥 SOT: ${sot}\n🪚 PLANO: ${plano}\n📅 FECHA Y FRANJA: ${fechaFranja}\n📧 Motivo: SIN FRANJAS DISPONIBLES\n🚨 Sup acargo: ${sup}`;
-  
-  const elHabilitar = document.getElementById('outputHabilitarFranja');
-  if (elHabilitar) {
-    elHabilitar.value = formato;
-  }
 }
 
 /* ==========================================================================
-   7. BLOC DE NOTAS, MODALES Y TOASTS
+   FUNCIÓN DE NOTIFICACIÓN FLOTANTE (TOAST DE 3 SEGUNDOS)
    ========================================================================== */
 
 let toastTimeout;
@@ -761,6 +721,10 @@ function copiarFallback(texto) {
   document.body.removeChild(tempInput);
 }
 
+/* ==========================================================================
+   BLOC DE NOTAS Y ADVERTENCIA DE DUPLICADOS
+   ========================================================================== */
+
 function intentarGuardarEnBloc() {
   const plantillaGen = document.getElementById('outputPlantilla').value.trim();
   if (!plantillaGen) {
@@ -794,6 +758,10 @@ function cancelarAgregarDuplicado() {
   if (modalDup) modalDup.style.display = 'none';
 }
 
+/* ==========================================================================
+   FUNCIÓN PARA LIMPIAR TODOS LOS CAMPOS AUTOMÁTICAMENTE
+   ========================================================================== */
+
 function limpiarTodosLosCampos() {
   const rawInput = document.getElementById('rawInput');
   if (rawInput) rawInput.value = '';
@@ -815,6 +783,10 @@ function limpiarTodosLosCampos() {
   const outputPlantilla = document.getElementById('outputPlantilla');
   if (outputPlantilla) outputPlantilla.value = '';
 }
+
+/* ==========================================================================
+   GUARDAR EN BLOC Y LIMPIAR
+   ========================================================================== */
 
 function guardarEnBlocDirecto(textoPlantilla) {
   const clienteDataActual = obtenerClienteData();
@@ -863,4 +835,26 @@ function exportarBloc() {
   a.href = URL.createObjectURL(blob);
   a.download = `Registro_Gestiones_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
+}
+
+
+function inicializarTema() {
+  const temaGuardado = localStorage.getItem('themeADP') || 'light';
+  document.documentElement.setAttribute('data-theme', temaGuardado);
+  actualizarBotonTema(temaGuardado);
+}
+
+function actualizarBotonTema(tema) {
+  const icon = document.getElementById('themeIcon');
+  const text = document.getElementById('themeText');
+  
+  if (icon && text) {
+    if (tema === 'dark') {
+      icon.innerText = '☀️';
+      text.innerText = 'Claro';
+    } else {
+      icon.innerText = '🌙';
+      text.innerText = 'Oscuro';
+    }
+  }
 }
