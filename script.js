@@ -1,5 +1,5 @@
 /* ==========================================================================
-   ESTADO GLOBAL Y CONFIGURACIÓN DE CATEGORÍAS
+   1. ESTADO GLOBAL Y CONFIGURACIÓN DE CATEGORÍAS
    ========================================================================== */
 
 let usuarioActual = { nombre: "", codigoE: "" };
@@ -81,7 +81,7 @@ const CATEGORIAS_CONFIG = {
 };
 
 /* ==========================================================================
-   INICIALIZACIÓN Y EVENTOS
+   2. INICIALIZACIÓN Y EVENTOS DOM
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -126,7 +126,6 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btnConfirmarDuplicado')?.addEventListener('click', confirmarAgregarDuplicado);
   document.getElementById('btnCancelarDuplicado')?.addEventListener('click', cancelarAgregarDuplicado);
 
-  // Escuchador para copiar formato Habilitar Franja
   document.getElementById('btnCopiarHabilitar')?.addEventListener('click', function() {
     const area = document.getElementById('outputHabilitarFranja');
     if (!area || !area.value.trim()) return;
@@ -138,7 +137,6 @@ document.addEventListener('DOMContentLoaded', function() {
     mostrarToast("📋 Formato Habilitar Franja copiado");
   });
 
-  // Escuchador para actualizar supervisor en vivo
   document.getElementById('inputSupCargo')?.addEventListener('input', function() {
     const clienteData = obtenerClienteData();
     const fechaVisita = obtenerFechaYFranjaFormateada();
@@ -149,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /* ==========================================================================
-   GESTIÓN DE SESIÓN Y TEMA
+   3. GESTIÓN DE SESIÓN Y TEMA
    ========================================================================== */
 
 function iniciarSesion() {
@@ -240,7 +238,7 @@ function actualizarBotonTema(tema) {
 }
 
 /* ==========================================================================
-   PROCESADOR DE TEXTO TOA (EXTRACCIÓN PRECISA DE DATOS)
+   4. PROCESADOR DE TEXTO TOA (EXTRACCIÓN DE DATOS)
    ========================================================================== */
 
 function procesarTextoTOA() {
@@ -251,13 +249,13 @@ function procesarTextoTOA() {
     return;
   }
 
-  // 1. EXTRAER SOT
+  // Extracción de SOT
   const sotMatch = text.match(/(?:SOT|sot|Nro SOT|N° SOT|Orden)\s*[:\t\r\n]*\s*(\d+)/i) || text.match(/\b\d{8,9}\b/);
 
-  // 2. EXTRAER TELÉFONO
+  // Extracción de Teléfono
   const telMatch = text.match(/(?:Telefono|Telefono\s*Cliente|Contacto|Movil|Celular|Telefonos)\s*[:\t\r\n]*\s*(\d{7,9})/i) || text.match(/\b9\d{8}\b/);
 
-  // 3. EXTRAER CLIENTE
+  // Extracción de Cliente
   let cliente = "S/N";
   const clienteMatch = text.match(/Nombre\s*[:\t\r\n]+\s*([\s\S]*?)(?=\s*Tipo\s*de\s*Documento)/i);
 
@@ -274,7 +272,7 @@ function procesarTextoTOA() {
     cliente = "S/N";
   }
 
-  // 4. EXTRAER CONTRATA
+  // Extracción de Contrata
   let contrata = "SAVAL";
   const contrataDirectaMatch = text.match(/\b(?:INST|MANT|REVI|MANTENIMIENTO)\s+([A-Z0-9]+)/i);
 
@@ -290,7 +288,7 @@ function procesarTextoTOA() {
     }
   }
 
-  // 5. EXTRAER FECHA Y FRANJA HORARIA AUTOMÁTICAMENTE
+  // Extracción de Fecha y Franja Horaria
   const fechaMatch = text.match(/(?:Fecha\s*de\s*Programacion|Fecha)\s*[:\t\r\n]*\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i) || text.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/);
 
   if (fechaMatch && fechaMatch[1]) {
@@ -312,7 +310,7 @@ function procesarTextoTOA() {
     franjaToaPorDefecto = "AM1";
   }
 
-  // 6. EXTRAER PLANO, SUBTIPO, DIRECCIÓN, DISTRITO Y COD CLIENTE (NUEVO)
+  // Extracción de variables secundarias
   const planoMatch = text.match(/(?:Plano)\s*[:\t\r\n]*\s*([A-Z0-9-]+)/i);
   if (planoMatch) planoExtraido = planoMatch[1].trim();
 
@@ -328,7 +326,7 @@ function procesarTextoTOA() {
   const distMatch = text.match(/(?:Distrito)\s*[:\t\r\n]*\s*([^\r\n]+)/i);
   if (distMatch) distritoExtraido = distMatch[1].trim();
 
-  // Asignar a la vista previa
+  // Asignar valores a la vista previa
   const sot = sotMatch ? (sotMatch[1] || sotMatch[0]) : "S/N";
   const telefono = telMatch ? (telMatch[1] || telMatch[0]) : "S/N";
 
@@ -366,7 +364,7 @@ function obtenerClienteData() {
 }
 
 /* ==========================================================================
-   DYNAMIC FORM CONTROLS
+   5. CONTROLES DINÁMICOS
    ========================================================================== */
 
 function actualizarSubcategorias() {
@@ -599,7 +597,7 @@ function renderizarCamposDinamicos() {
 }
 
 /* ==========================================================================
-   HELPERS & GENERACIÓN DE PLANTILLAS Y SINCRONIZACIÓN DE FRANJAS
+   6. GENERACIÓN DE PLANTILLAS Y HERRAMIENTAS
    ========================================================================== */
 
 function v(id) {
@@ -694,8 +692,6 @@ function generarPlantilla() {
   }
 
   document.getElementById('outputPlantilla').value = p;
-
-  // GENERACIÓN Y SINCRONIZACIÓN AUTOMÁTICA DEL FORMATO HABILITAR FRANJA
   generarFormatoHabilitarFranja(clienteData.sot, planoExtraido, fechaVisita, supCargo);
 }
 
@@ -709,7 +705,7 @@ function generarFormatoHabilitarFranja(sot, plano, fechaFranja, sup) {
 }
 
 /* ==========================================================================
-   FUNCIÓN DE NOTIFICACIÓN FLOTANTE Y REGISTRO
+   7. BLOC DE NOTAS, MODALES Y TOASTS
    ========================================================================== */
 
 let toastTimeout;
@@ -867,120 +863,4 @@ function exportarBloc() {
   a.href = URL.createObjectURL(blob);
   a.download = `Registro_Gestiones_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
-}
-
-
-
-
-
-/* ==========================================================================
-   GESTIÓN DE MODO OSCURO / MODO CLARO
-   ========================================================================== */
-
-function inicializarTema() {
-  const temaGuardado = localStorage.getItem('themeADP') || 'light';
-  document.documentElement.setAttribute('data-theme', temaGuardado);
-  actualizarBotonTema(temaGuardado);
-
-  const btnTheme = document.getElementById('btnToggleTheme');
-  if (btnTheme) {
-    btnTheme.addEventListener('click', function() {
-      const temaActual = document.documentElement.getAttribute('data-theme');
-      const nuevoTema = temaActual === 'dark' ? 'light' : 'dark';
-      
-      document.documentElement.setAttribute('data-theme', nuevoTema);
-      localStorage.setItem('themeADP', nuevoTema);
-      actualizarBotonTema(nuevoTema);
-    });
-  }
-}
-
-function actualizarBotonTema(tema) {
-  const icon = document.getElementById('themeIcon');
-  const text = document.getElementById('themeText');
-  
-  if (icon && text) {
-    if (tema === 'dark') {
-      icon.innerText = '☀️';
-      text.innerText = 'Modo Claro';
-    } else {
-      icon.innerText = '🌙';
-      text.innerText = 'Modo Oscuro';
-    }
-  }
-}
-
-/* ==========================================================================
-   GUARDAR EN BLOC Y LIMPIAR
-   ========================================================================== */
-
-function guardarEnBlocDirecto(textoPlantilla) {
-  const clienteDataActual = obtenerClienteData();
-  const item = {
-    id: listaGestiones.length + 1,
-    sot: clienteDataActual.sot,
-    telefono: clienteDataActual.telefono,
-    plantilla: textoPlantilla
-  };
-
-  listaGestiones.push(item);
-  renderizarBloc();
-    
-  mostrarToast("💾 ¡Plantilla guardada en el Bloc de Notas!");
-  limpiarTodosLosCampos();
-}
-
-function renderizarBloc() {
-  const container = document.getElementById('blocNotasView');
-  if (!container) return;
-
-  if (listaGestiones.length === 0) {
-    container.innerText = "Aún no hay registros guardados hoy.";
-    return;
-  }
-
-  let textContent = "";
-  listaGestiones.forEach(g => {
-    textContent += `${g.id}.\nNumero SOT: ${g.sot}\nTelefono: ${g.telefono}\nPlantilla generada:\n${g.plantilla}\n\n**********\n\n`;
-  });
-
-  container.innerText = textContent;
-}
-
-function exportarBloc() {
-  if (listaGestiones.length === 0) {
-    mostrarToast("⚠️ No hay registros en el bloc para exportar", "#dc3545");
-    return;
-  }
-  const container = document.getElementById('blocNotasView');
-  if (!container) return;
-
-  const text = container.innerText;
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `Registro_Gestiones_${new Date().toISOString().slice(0,10)}.txt`;
-  a.click();
-}
-
-
-function inicializarTema() {
-  const temaGuardado = localStorage.getItem('themeADP') || 'light';
-  document.documentElement.setAttribute('data-theme', temaGuardado);
-  actualizarBotonTema(temaGuardado);
-}
-
-function actualizarBotonTema(tema) {
-  const icon = document.getElementById('themeIcon');
-  const text = document.getElementById('themeText');
-  
-  if (icon && text) {
-    if (tema === 'dark') {
-      icon.innerText = '☀️';
-      text.innerText = 'Claro';
-    } else {
-      icon.innerText = '🌙';
-      text.innerText = 'Oscuro';
-    }
-  }
 }
