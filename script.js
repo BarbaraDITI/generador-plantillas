@@ -1,42 +1,5 @@
 /* ==========================================================================
-   GESTIÓN DE MODO OSCURO / MODO CLARO
-   ========================================================================== */
-
-function inicializarTema() {
-  const temaGuardado = localStorage.getItem('themeADP') || 'light';
-  document.documentElement.setAttribute('data-theme', temaGuardado);
-  actualizarBotonTema(temaGuardado);
-
-  const btnTheme = document.getElementById('btnToggleTheme');
-  if (btnTheme) {
-    btnTheme.addEventListener('click', function() {
-      const temaActual = document.documentElement.getAttribute('data-theme');
-      const nuevoTema = temaActual === 'dark' ? 'light' : 'dark';
-      
-      document.documentElement.setAttribute('data-theme', nuevoTema);
-      localStorage.setItem('themeADP', nuevoTema);
-      actualizarBotonTema(nuevoTema);
-    });
-  }
-}
-
-function actualizarBotonTema(tema) {
-  const icon = document.getElementById('themeIcon');
-  const text = document.getElementById('themeText');
-  
-  if (icon && text) {
-    if (tema === 'dark') {
-      icon.innerText = '☀️';
-      text.innerText = 'Modo Claro';
-    } else {
-      icon.innerText = '🌙';
-      text.innerText = 'Modo Oscuro';
-    }
-  }
-}
-
-/*==========================================================================
-   ESTADO GLOBAL Y CONFIGURACIÓN DE CATEGORÍAS
+   1. ESTADO GLOBAL Y CONFIGURACIÓN
    ========================================================================== */
 
 let usuarioActual = { nombre: "", codigoE: "" };
@@ -45,39 +8,70 @@ let plantillaPendiente = null;
 let fechaToaPorDefecto = "";
 let franjaToaPorDefecto = "AM1";
 
+// Variables extraídas de TOA
+let planoExtraido = "S/N";
+let subTipoExtraido = "S/N";
+let codClienteExtraido = "S/N";
+let direccionExtraida = "S/N";
+let distritoExtraido = "S/N";
+
+/* ==========================================================================
+   CONFIGURACIÓN CORREGIDA DE RECHAZOS (8 CATEGORÍAS)
+   ========================================================================== */
+
 const SUBMOTIVOS_RECHAZO = {
-  RECH_NO_DESEA_MESA: [
-    "Cliente ya tiene servicio de otro operador",
-    "Titular no ha contratado ningun servicio a Claro",
-    "Demora en la atención de la solicitud, ya no desea esperar.",
-    "Cliente no desea servicio por Motivos personales."
+  RECH_NO_DESEA: [
+    "Cliente indica tener problemas económicos",
+    "Cuenta con servicio de otro operador",
+    "Demora en atención, no desea esperar",
+    "Incumplimiento de fecha pactada",
+    "Motivos personales, no da razones",
+    "Mudanza o viaje",
+    "No desea recibir a personal técnico",
+    "No está de acuerdo con pago",
+    "No ha contratado ningún servicio",
+    "Requiere cambio de titularidad",
+    "Solicitó otra fecha de instalación en la venta",
+    "Técnico indujo al rechazo por mala información",
+    "Tiene propuesta de otro operador"
+  ],
+  RECH_DUPLICIDAD: [
+    "Doble SOT de diferentes puntos de venta",
+    "Doble SOT del mismo punto de venta",
+    "Se atendió con otra SOT",
+    "Se rechazó con otra SOT"
   ],
   RECH_FACILIDADES: [
-    "Dueño de Casa y/o Edificio no autoriza la instalacion.",
-    "Al momento de la instalación no hay acceso al techo",
-    "Al momento de la instalación se valida ducterias obstruidas",
-    "Cliente cuenta con sot de suspensión y/o baja"
+    "Ductos obstruidos",
+    "Dueño de casa o edificio no autoriza instalación",
+    "Sin acceso al techo, montantes u otros ambientes"
+  ],
+  RECH_CONTACTO: [
+    "Numero equivocado, no existe o no responde"
   ],
   RECH_DIRECCION: [
-    "Dirección registrada en el sistema es errada. (numero, lt, mz, nombre calle, distrito)"
+    "Direccion incorrecta"
   ],
   RECH_OFERTA: [
-    "Tecnología incorrecta FTTH/HFC/OVERLAP Instalación/ Post Venta]",
-    "Velocidad de Internet no es acorde a lo solicitado por el cliente",
-    "Cantidad o Modelo de Decos no es acorde a lo solicitado por el cliente",
-    "Cliente solicito atención PostVenta (Decos adicionales, traslados, etc.)",
-    "Cliente solicita adicionar la telefonía",
-    "Decodificadores descontinuados (Básico HD, Básico, Standard, DVR)"
-  ],
-  RECH_MUDANZA: [
-    "Cliente salió de viaje y en el domicilio no tienen conocimiento de la Instalación.",
-    "Cliente no vive en esta dirección, se mudó.",
-    "Cliente indica que pronto se mudará o viajará y rechaza instalación."
+    "Cliente solicito PostVenta (Adicionales, traslado)",
+    "Equipo no autorizado para venta",
+    "Paquete no es lo solicitado por el Cliente",
+    "Solicita instalación compartida para 2 direcciones",
+    "Tecnología incorrecta",
+    "Tecnología incorrecta, cliente no acepta FTTH",
+    "Tecnología incorrecta, cliente no acepta HFC",
+    "Tecnología incorrecta, se genera SOT de reemplazo",
+    "Velocidad supera capacidad de plano"
   ],
   RECH_SISTEMA: [
+    "Campaña mal configurada, etiquetas incorrectas Duplicidad de números o etiquetas",
+    "Mal generada, no genera reservas",
+    "Nombre del Cliente con errores NN NN NN",
     "Sin workflow, sin tareas generadas",
-    "Campaña mal configurada, no figura etiquetas correctas",
-    "Solicitud mal generada (no genera reservas, duplicidad de números, duplicidad de etiquetas, Sin Co_id, sin CustomerID, Sin plano, etc.)"
+    "SOT sin customer, plano, Co_id"
+  ],
+  RECH_FRAUDE: [
+    "Cliente ya tiene un servicio activo en la misma dirección"
   ]
 };
 
@@ -95,35 +89,27 @@ const CATEGORIAS_CONFIG = {
     { id: 'REPRO_CLARO', nombre: 'Reprogramado por Claro' }
   ],
   RECHAZOS: [
-    { id: 'RECH_NO_DESEA_MESA', nombre: 'Cliente no desea servicio - Mesa' },
+    { id: 'RECH_NO_DESEA', nombre: 'Cliente no desea servicio' },
     { id: 'RECH_DUPLICIDAD', nombre: 'Por duplicidad - Mesa' },
     { id: 'RECH_FACILIDADES', nombre: 'Por facilidades técnicas del cliente - Mesa' },
     { id: 'RECH_CONTACTO', nombre: 'Por falta de contacto - Mesa' },
     { id: 'RECH_DIRECCION', nombre: 'Por mal ingreso de dirección - Mesa' },
     { id: 'RECH_OFERTA', nombre: 'Por mala oferta - Mesa' },
-    { id: 'RECH_MUDANZA', nombre: 'Por mudanza o viaje - Mesa' },
     { id: 'RECH_SISTEMA', nombre: 'Por SOT con errores de Sistema - Mesa' },
     { id: 'RECH_FRAUDE', nombre: 'Por posible fraude - Mesa' }
+  ],
+  FUERA_TOA: [
+    { id: 'FTOA_GENERAL', nombre: 'Plantilla Fuera de TOA' }
   ]
 };
 
 /* ==========================================================================
-   INICIALIZACIÓN Y EVENTOS
+   2. INICIALIZACIÓN Y EVENTOS DOM
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', function() {
-  inicializarTema();
-
-  document.getElementById('btnToggleTheme')?.addEventListener('click', function() {
-    const temaActual = document.documentElement.getAttribute('data-theme');
-    const nuevoTema = temaActual === 'dark' ? 'light' : 'dark';
-    
-    document.documentElement.setAttribute('data-theme', nuevoTema);
-    localStorage.setItem('themeADP', nuevoTema);
-    actualizarBotonTema(nuevoTema);
-  });
-
   cargarSesionGuardada();
+  inicializarTema();
 
   const btnIngresar = document.getElementById('btnIngresarLogin');
   if (btnIngresar) {
@@ -143,8 +129,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  document.getElementById('btnToggleTheme')?.addEventListener('click', function() {
+    const temaActual = document.documentElement.getAttribute('data-theme');
+    const nuevoTema = temaActual === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nuevoTema);
+    localStorage.setItem('themeADP', nuevoTema);
+    actualizarBotonTema(nuevoTema);
+  });
+
   document.getElementById('btnCerrarSesion')?.addEventListener('click', cerrarSesion);
   document.getElementById('btnProcesarTOA')?.addEventListener('click', procesarTextoTOA);
+  document.getElementById('btnLimpiarCol1y2')?.addEventListener('click', limpiarColumnas1y2);
   document.getElementById('selectCategoria')?.addEventListener('change', actualizarSubcategorias);
   document.getElementById('selectSubcategoria')?.addEventListener('change', renderizarCamposDinamicos);
   document.getElementById('btnGenerarPlantilla')?.addEventListener('click', generarPlantilla);
@@ -155,11 +150,36 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btnConfirmarDuplicado')?.addEventListener('click', confirmarAgregarDuplicado);
   document.getElementById('btnCancelarDuplicado')?.addEventListener('click', cancelarAgregarDuplicado);
 
+  // Botón Generar en Columna 4
+  document.getElementById('btnGenerarHabilitar')?.addEventListener('click', function() {
+    actualizarFormatoHabilitarFranja();
+    mostrarToast("✅ Formato Habilitar Franja generado");
+  });
+
+  // Botón Copiar en Columna 4
+  document.getElementById('btnCopiarHabilitar')?.addEventListener('click', function() {
+    const area = document.getElementById('outputHabilitarFranja');
+    if (!area || !area.value.trim()) {
+      mostrarToast("⚠️ Genera un formato primero", "#dc3545");
+      return;
+    }
+
+    const textoLimpio = area.value.replace(/\r?\n/g, "\r\n");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(textoLimpio);
+    }
+    mostrarToast("📋 Formato Habilitar Franja copiado");
+  });
+
+  // Actualización en vivo al escribir en supervisor
+  document.getElementById('inputSupCargo')?.addEventListener('input', actualizarFormatoHabilitarFranja);
+
   actualizarSubcategorias();
+  actualizarContadorGestiones();
 });
 
 /* ==========================================================================
-   GESTIÓN DE SESIÓN
+   3. GESTIÓN DE SESIÓN Y TEMA
    ========================================================================== */
 
 function iniciarSesion() {
@@ -170,7 +190,6 @@ function iniciarSesion() {
 
   const nombre = inputNombre.value.trim();
   const codigoE = inputE.value.trim().toUpperCase();
-
   const regexE = /^E\d{6}$/;
 
   if (!nombre) {
@@ -228,8 +247,27 @@ function cerrarSesion() {
   if (modalLogin) modalLogin.style.display = 'flex';
 }
 
+function inicializarTema() {
+  const temaGuardado = localStorage.getItem('themeADP') || 'light';
+  document.documentElement.setAttribute('data-theme', temaGuardado);
+  actualizarBotonTema(temaGuardado);
+}
+
+function actualizarBotonTema(tema) {
+  const icon = document.getElementById('themeIcon');
+  const text = document.getElementById('themeText');
+  
+  if (icon && text) {
+    if (tema === 'dark') {
+      text.innerText = 'Claro';
+    } else {
+      text.innerText = 'Oscuro';
+    }
+  }
+}
+
 /* ==========================================================================
-   PROCESADOR DE TEXTO TOA (EXTRACCIÓN PRECISA DE CLIENTE Y CONTRATA)
+   4. PROCESADOR DE TEXTO TOA (EXTRACCIÓN DE DATOS)
    ========================================================================== */
 
 function procesarTextoTOA() {
@@ -240,16 +278,12 @@ function procesarTextoTOA() {
     return;
   }
 
-  // 1. EXTRAER SOT
+  // Extracción de datos principales
   const sotMatch = text.match(/(?:SOT|sot|Nro SOT|N° SOT|Orden)\s*[:\t\r\n]*\s*(\d+)/i) || text.match(/\b\d{8,9}\b/);
-
-  // 2. EXTRAER TELÉFONO
   const telMatch = text.match(/(?:Telefono|Telefono\s*Cliente|Contacto|Movil|Celular|Telefonos)\s*[:\t\r\n]*\s*(\d{7,9})/i) || text.match(/\b9\d{8}\b/);
 
-  // 3. EXTRAER CLIENTE (Exacto: Entre "Nombre" y "Tipo de Documento")
   let cliente = "S/N";
   const clienteMatch = text.match(/Nombre\s*[:\t\r\n]+\s*([\s\S]*?)(?=\s*Tipo\s*de\s*Documento)/i);
-
   if (clienteMatch && clienteMatch[1]) {
     cliente = clienteMatch[1].replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
   } else {
@@ -259,29 +293,21 @@ function procesarTextoTOA() {
     }
   }
 
-  if (/^(CLIENTE|NOMBRE|ABONADO|S\/N)$/i.test(cliente)) {
-    cliente = "S/N";
-  }
+  if (/^(CLIENTE|NOMBRE|ABONADO|S\/N)$/i.test(cliente)) cliente = "S/N";
 
-  // 4. EXTRAER CONTRATA (PRIORIDAD ALTA: Palabra inmediata a INST o MANT)
   let contrata = "SAVAL";
   const contrataDirectaMatch = text.match(/\b(?:INST|MANT|REVI|MANTENIMIENTO)\s+([A-Z0-9]+)/i);
-
   if (contrataDirectaMatch && contrataDirectaMatch[1]) {
     contrata = contrataDirectaMatch[1].toUpperCase().trim();
   } else {
     const detallesMatch = text.match(/Detalles?\s+de\s+actividad[\s\S]*?\n\s*([A-Z0-9]+)/i);
     if (detallesMatch && detallesMatch[1] && !/^(DETALLES|DATOS|VELASQUEZ|ORACLE)$/i.test(detallesMatch[1])) {
       contrata = detallesMatch[1].toUpperCase().trim();
-    } else {
-      const contrataFallback = actividadesYContratas(text);
-      if (contrataFallback) contrata = contrataFallback;
     }
   }
 
-  // 5. EXTRAER FECHA Y FRANJA HORARIA AUTOMÁTICAMENTE
+  // Fecha y Franja
   const fechaMatch = text.match(/(?:Fecha\s*de\s*Programacion|Fecha)\s*[:\t\r\n]*\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i) || text.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/);
-
   if (fechaMatch && fechaMatch[1]) {
     const partes = fechaMatch[1].split('/');
     if (partes.length === 3) {
@@ -295,13 +321,25 @@ function procesarTextoTOA() {
   }
 
   const franjaMatch = text.match(/\b(AM0|AM1|PM1|PM2|PM3)\b/i);
-  if (franjaMatch) {
-    franjaToaPorDefecto = franjaMatch[1].toUpperCase();
-  } else {
-    franjaToaPorDefecto = "AM1";
-  }
+  franjaToaPorDefecto = franjaMatch ? franjaMatch[1].toUpperCase() : "AM1";
 
-  // Asignar a la vista previa
+  // Variables secundarias
+  const planoMatch = text.match(/(?:Plano)\s*[:\t\r\n]*\s*([A-Z0-9-]+)/i);
+  if (planoMatch) planoExtraido = planoMatch[1].trim();
+
+  const subTipoMatch = text.match(/(?:Sub\s*Tipo\s*de\s*Orden|Subtipo)\s*[:\t\r\n]*\s*([^\r\n]+)/i);
+  if (subTipoMatch) subTipoExtraido = subTipoMatch[1].trim();
+
+  const codClienteMatch = text.match(/(?:Código\s*de\s*Cliente|Cod\s*Cliente)\s*[:\t\r\n]*\s*(\d+)/i);
+  if (codClienteMatch) codClienteExtraido = codClienteMatch[1].trim();
+
+  const dirMatch = text.match(/(?:Direccion|Dirección)\s*[:\t\r\n]*\s*([^\r\n]+)/i);
+  if (dirMatch) direccionExtraida = dirMatch[1].trim();
+
+  const distMatch = text.match(/(?:Distrito)\s*[:\t\r\n]*\s*([^\r\n]+)/i);
+  if (distMatch) distritoExtraido = distMatch[1].trim();
+
+  // Asignar valores
   const sot = sotMatch ? (sotMatch[1] || sotMatch[0]) : "S/N";
   const telefono = telMatch ? (telMatch[1] || telMatch[0]) : "S/N";
 
@@ -311,22 +349,8 @@ function procesarTextoTOA() {
   document.getElementById('pvContrata').value = contrata;
 
   renderizarCamposDinamicos();
+  actualizarFormatoHabilitarFranja();
   mostrarToast("✅ Datos procesados correctamente");
-}
-
-function actividadesYContratas(textoCompleto) {
-  const contratasConocidas = [
-    "INSERTEL", "SAVAL", "DOMINION", "COBRA", "LIMA TEL", 
-    "TELCOS", "COMFICA", "IIC", "CARLEI", "TELECOM", "EZENTIS", "CAM"
-  ];
-  
-  const textoUpper = textoCompleto.toUpperCase();
-  for (const c of contratasConocidas) {
-    if (textoUpper.includes(c)) {
-      return c;
-    }
-  }
-  return null;
 }
 
 function obtenerClienteData() {
@@ -339,7 +363,7 @@ function obtenerClienteData() {
 }
 
 /* ==========================================================================
-   DYNAMIC FORM CONTROLS
+   5. CONTROLES DINÁMICOS
    ========================================================================== */
 
 function actualizarSubcategorias() {
@@ -366,7 +390,7 @@ function renderizarCamposDinamicos() {
 
   let html = '<div class="grid-2">';
 
-  if (subcat.startsWith('CONF_')) {
+  if (subcat.startsWith('CONF_') || subcat === 'FTOA_GENERAL') {
     html += `
       <div>
         <label class="lbl-sm">Fecha de Visita</label>
@@ -456,6 +480,7 @@ function renderizarCamposDinamicos() {
     `;
   } else if (subcat.startsWith('RECH_')) {
     const clienteData = obtenerClienteData();
+    const opciones = SUBMOTIVOS_RECHAZO[subcat] || [];
 
     if (subcat === 'RECH_DUPLICIDAD') {
       html += `
@@ -466,6 +491,12 @@ function renderizarCamposDinamicos() {
         <div>
           <label class="lbl-sm">ID Llamada</label>
           <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
+        </div>
+        <div style="grid-column: span 2;">
+          <label class="lbl-sm">Submotivo de Rechazo</label>
+          <select id="selectSubmotivoRechazo">
+            ${opciones.map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
         </div>
       `;
     } else if (subcat === 'RECH_DIRECCION') {
@@ -485,7 +516,7 @@ function renderizarCamposDinamicos() {
         <div style="grid-column: span 2;">
           <label class="lbl-sm">Submotivo de Rechazo</label>
           <select id="selectSubmotivoRechazo">
-            ${SUBMOTIVOS_RECHAZO.RECH_DIRECCION.map(s => `<option value="${s}">${s}</option>`).join('')}
+            ${opciones.map(s => `<option value="${s}">${s}</option>`).join('')}
           </select>
         </div>
       `;
@@ -494,7 +525,7 @@ function renderizarCamposDinamicos() {
         <div style="grid-column: span 2;">
           <label class="lbl-sm">Submotivo de Rechazo</label>
           <select id="selectSubmotivoRechazo">
-            ${SUBMOTIVOS_RECHAZO.RECH_SISTEMA.map(s => `<option value="${s}">${s}</option>`).join('')}
+            ${opciones.map(s => `<option value="${s}">${s}</option>`).join('')}
           </select>
         </div>
         <div>
@@ -525,23 +556,11 @@ function renderizarCamposDinamicos() {
           <input type="text" id="inputAutorizadoPor" placeholder="Ej: SUPERVISOR JUAN PEREZ">
         </div>
       `;
-    } else if (subcat === 'RECH_CONTACTO') {
-      html += `
-        <div>
-          <label class="lbl-sm">Persona que Contesta</label>
-          <input type="text" id="inputPersonaContesta" value="NO RESPONDE / SIN CONTACTO">
-        </div>
-        <div>
-          <label class="lbl-sm">ID Llamada</label>
-          <input type="text" id="inputIDLlamada" placeholder="Ej: 17909701296">
-        </div>
-      `;
     } else {
-      const opciones = SUBMOTIVOS_RECHAZO[subcat] || [];
       html += `
         <div>
           <label class="lbl-sm">Persona que Contesta</label>
-          <input type="text" id="inputPersonaContesta" value="${clienteData.cliente}">
+          <input type="text" id="inputPersonaContesta" value="${subcat === 'RECH_CONTACTO' ? 'NO RESPONDE / SIN CONTACTO' : clienteData.cliente}">
         </div>
         <div>
           <label class="lbl-sm">ID Llamada</label>
@@ -563,16 +582,18 @@ function renderizarCamposDinamicos() {
   const inputFecha = document.getElementById('inputFecha');
   if (inputFecha) {
     inputFecha.value = fechaToaPorDefecto || new Date().toISOString().split('T')[0];
+    inputFecha.addEventListener('change', actualizarFormatoHabilitarFranja);
   }
 
   const selectFranja = document.getElementById('selectFranja');
-  if (selectFranja && franjaToaPorDefecto) {
-    selectFranja.value = franjaToaPorDefecto;
+  if (selectFranja) {
+    if (franjaToaPorDefecto) selectFranja.value = franjaToaPorDefecto;
+    selectFranja.addEventListener('change', actualizarFormatoHabilitarFranja);
   }
 }
 
 /* ==========================================================================
-   HELPERS & GENERACIÓN DE PLANTILLAS
+   6. GENERACIÓN INDEPENDIENTE Y AUTOMÁTICA DE PLANTILLAS
    ========================================================================== */
 
 function v(id) {
@@ -606,14 +627,22 @@ function generarPlantilla() {
   const idLlamada = v('inputIDLlamada') || "S/N";
   const fechaVisita = obtenerFechaYFranjaFormateada();
   const obs = v('inputObs') || "SIN OBSERVACIONES";
-  const motivoDetalle = v('inputMotivoDetalle');
+  const motivoDetalle = v('inputMotivoDetalle') || "# Cambios en las fechas y franjas solicitadas";
   const personaContesta = v('inputPersonaContesta') || clienteData.cliente;
   const submotivo = v('selectSubmotivoRechazo');
-  const realizadorCompleto = `${usuarioActual.nombre.toUpperCase()}ADP MULTISKILL HITSS`;
+  const realizadorCompleto = `${usuarioActual.nombre.toUpperCase()} - ADP MULTISKILL HITSS`;
 
   let p = "";
 
   switch (subcat) {
+    case 'FTOA_GENERAL':
+      const ftoa = `*FUERA DE TOA*\n📌 SOT: ${clienteData.sot}\n⚙️ SUB TIPO: ${subTipoExtraido}\n🏡 DIRECCIÓN: ${direccionExtraida}\n📍 DISTRITO: ${distritoExtraido}\n🛠️ SERVICIO: FTTH\n🔑 PLANO: ${planoExtraido}\n👤 CLIENTE: ${clienteData.cliente}\n🔢 COD CLIENTE: ${codClienteExtraido}\n📱 CELULAR DEL CLIENTE: ${clienteData.telefono}\n📅 FECHA Y FRANJA: ${fechaVisita}\n✍️ REALIZADO POR: ${realizadorCompleto}`;
+      
+      const repro = `MESA MULTISKILL HITSS\nREPROGRAMADO EN CAMPO / REAGENDADO POR CLIENTE\nMOTIVO DE REPROGRAMACIÓN: CLIENTE ${motivoDetalle}\nCLIENTE: ${clienteData.cliente}\nTELÉFONO: ${clienteData.telefono}\nNUEVA FECHA Y FRANJA DE VISITA: ${fechaVisita}\nOBSERVACIÓN: ${obs}\nCONTRATA: ${clienteData.contrata}\nREALIZADO POR: ${usuarioActual.nombre.toUpperCase()}\nCÓD LLAMADA: ${idLlamada}`;
+      
+      p = `${ftoa}\n\n===================================\n\n${repro}`;
+      break;
+
     case 'CONF_LLAMADA':
       p = `MESA MULTISKILL HITSS - CONFIRMA VISITA\nSOT: ${clienteData.sot}\nDÍA Y FRANJA: ${fechaVisita}\nCLIENTE: ${clienteData.cliente}\nNUMERO: ${clienteData.telefono}\nCONTRATA: ${clienteData.contrata}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${usuarioActual.nombre.toUpperCase()}`;
       break;
@@ -632,41 +661,91 @@ function generarPlantilla() {
     case 'REPRO_CLARO':
       p = `MESA MULTISKILL HITSS\nREPROGRAMADO EN MESA / REAGENDADO POR CLARO\nMOTIVO DE REPROGRAMACIÓN: CLARO ${motivoDetalle}\nCLIENTE: ${clienteData.cliente}\nTELÉFONO: ${clienteData.telefono}\nNUEVA FECHA Y FRANJA DE VISITA: ${fechaVisita}\nOBSERVACIÓN: ${obs}\nCONTRATA: ${clienteData.contrata}\nREALIZADO POR: ${realizadorCompleto}\nCÓD LLAMADA: ${idLlamada}`;
       break;
-    case 'RECH_NO_DESEA_MESA':
+    case 'RECH_NO_DESEA':
       p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: CLIENTE NO DESEA EL SERVICIO - MESA\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
+
     case 'RECH_DUPLICIDAD':
-      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: RECHAZADO POR DUPLICIDAD\nSUBMOTIVO DE RECHAZO: se atendió con otra SOT\nSE PROCEDE AL RECHAZO DE LA SOLICITUD POR DUPLICIDAD DE SOT, SE ATENDIÓ CON LA SOT: ${v('inputSotDuplicada') || 'S/N'}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: RECHAZADO POR DUPLICIDAD\nSUBMOTIVO DE RECHAZO: ${submotivo}\nSE PROCEDE AL RECHAZO DE LA SOLICITUD POR DUPLICIDAD DE SOT, SE ATENDIÓ CON LA SOT: ${v('inputSotDuplicada') || 'S/N'}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
+
     case 'RECH_FACILIDADES':
       p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: FACILIDADES TÉCNICAS DEL CLIENTE\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
+
     case 'RECH_CONTACTO':
-      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: FALTA DE CONTACTO\nSUBMOTIVO DE RECHAZO: No hay contacto con el cliente (números errados)\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: FALTA DE CONTACTO\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
+
     case 'RECH_DIRECCION':
       p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: MAL INGRESO DE DIRECCIÓN\nDIRECCIÓN CORRECTA: ${v('inputDireccionCorrecta') || 'S/N'}\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
+
     case 'RECH_OFERTA':
       p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: MALA OFERTA\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
-    case 'RECH_MUDANZA':
-      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: MUDANZA O VIAJE\nSUBMOTIVO DE RECHAZO: ${submotivo}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
-      break;
+
     case 'RECH_SISTEMA':
-      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nMOTIVO DEL RECHAZO: SOT CON ERRORES EN EL SISTEMA\nSUBMOTIVO DE RECHAZO: ${submotivo}\nSE PROCEDE AL RECHAZO DE LA SOLICITUD POR TENER ERRORES DE SISTEMAS: ${v('inputDetalleSistema') || 'SIN ESPECIFICAR'}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
+      p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nMOTIVO DEL RECHAZO: SOT CON ERRORES EN EL SISTEMA\nSUBMOTIVO DE RECHAZO: ${submotivo}\nSE PROCEDE AL RECHAZO DE LA SOLICITUD POR TENER ERRORES DE SISTEMAS\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
+
     case 'RECH_FRAUDE':
       p = `MESA MULTISKILL HITSS\nRECHAZO EN MESA / CAMPO: RECHAZADO EN MESA\nPERSONA QUE CONTESTA: ${personaContesta}\nNUMERO DE CONTACTO: ${clienteData.telefono}\nMOTIVO DEL RECHAZO: POSIBLE FRAUDE\nSUBMOTIVO DE RECHAZO: Cliente ya tiene un servicio activo en la misma dirección\nCUSTOMER ID: ${v('inputCustomerID') || 'S/N'}\nAUTORIZADO POR: ${v('inputAutorizadoPor') || 'S/N'}\nID DE LLAMADA: ${idLlamada}\nREALIZADO POR: ${realizadorCompleto}`;
       break;
   }
 
   document.getElementById('outputPlantilla').value = p;
+  actualizarFormatoHabilitarFranja();
+}
+
+function actualizarFormatoHabilitarFranja() {
+  const clienteData = obtenerClienteData();
+  const fechaVisita = obtenerFechaYFranjaFormateada();
+  const supCargo = v('inputSupCargo') || "SIN ASIGNAR";
+
+  const formato = `MESA MULTISKILL HITSS - FORMATO PARA HABILITAR FRANJA\n📥 SOT: ${clienteData.sot}\n🪚 PLANO: ${planoExtraido}\n📅 FECHA Y FRANJA: ${fechaVisita}\n📧 Motivo: SIN FRANJAS DISPONIBLES\n🚨 Sup acargo: ${supCargo}`;
+  
+  const elHabilitar = document.getElementById('outputHabilitarFranja');
+  if (elHabilitar) {
+    elHabilitar.value = formato;
+  }
 }
 
 /* ==========================================================================
-   FUNCIÓN DE NOTIFICACIÓN FLOTANTE (TOAST DE 3 SEGUNDOS)
+   7. BOTÓN LIMPIAR, BLOC DE NOTAS Y CONTADOR
    ========================================================================== */
+
+function limpiarColumnas1y2() {
+  const rawInput = document.getElementById('rawInput');
+  if (rawInput) rawInput.value = '';
+
+  document.getElementById('pvSOT').value = '';
+  document.getElementById('pvTel').value = '';
+  document.getElementById('pvCliente').value = '';
+  document.getElementById('pvContrata').value = '';
+
+  planoExtraido = "S/N";
+  subTipoExtraido = "S/N";
+  codClienteExtraido = "S/N";
+  direccionExtraida = "S/N";
+  distritoExtraido = "S/N";
+
+  const outputPlantilla = document.getElementById('outputPlantilla');
+  if (outputPlantilla) outputPlantilla.value = '';
+
+  const outputHabilitar = document.getElementById('outputHabilitarFranja');
+  if (outputHabilitar) outputHabilitar.value = '';
+
+  renderizarCamposDinamicos();
+  mostrarToast("🧹 Columnas 1 y 2 limpiadas");
+}
+
+function actualizarContadorGestiones() {
+  const cont = document.getElementById('contadorGestiones');
+  if (cont) {
+    cont.innerText = `Total: ${listaGestiones.length}`;
+  }
+}
 
 let toastTimeout;
 
@@ -675,7 +754,6 @@ function mostrarToast(mensaje, color = "#28a745") {
   if (!toast) return;
 
   clearTimeout(toastTimeout);
-
   toast.innerText = mensaje;
   toast.style.backgroundColor = color;
   toast.classList.add('show');
@@ -695,35 +773,10 @@ function copiarPlantilla() {
   const textoLimpio = area.value.replace(/\r?\n/g, "\r\n").replace(/\u200B/g, "");
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(textoLimpio).catch(() => {
-      copiarFallback(textoLimpio);
-    });
-  } else {
-    copiarFallback(textoLimpio);
+    navigator.clipboard.writeText(textoLimpio);
   }
-
   mostrarToast("📋 ¡Plantilla copiada correctamente!");
 }
-
-function copiarFallback(texto) {
-  const tempInput = document.createElement("textarea");
-  tempInput.value = texto;
-  tempInput.style.position = "fixed";
-  tempInput.style.left = "-9999px";
-  document.body.appendChild(tempInput);
-  
-  tempInput.select();
-  try {
-    document.execCommand("copy");
-  } catch (err) {
-    console.error("Error al copiar");
-  }
-  document.body.removeChild(tempInput);
-}
-
-/* ==========================================================================
-   BLOC DE NOTAS Y ADVERTENCIA DE DUPLICADOS
-   ========================================================================== */
 
 function intentarGuardarEnBloc() {
   const plantillaGen = document.getElementById('outputPlantilla').value.trim();
@@ -758,36 +811,6 @@ function cancelarAgregarDuplicado() {
   if (modalDup) modalDup.style.display = 'none';
 }
 
-/* ==========================================================================
-   FUNCIÓN PARA LIMPIAR TODOS LOS CAMPOS AUTOMÁTICAMENTE
-   ========================================================================== */
-
-function limpiarTodosLosCampos() {
-  const rawInput = document.getElementById('rawInput');
-  if (rawInput) rawInput.value = '';
-
-  document.getElementById('pvSOT').value = '';
-  document.getElementById('pvTel').value = '';
-  document.getElementById('pvCliente').value = '';
-  document.getElementById('pvContrata').value = '';
-
-  const inputIDLlamada = document.getElementById('inputIDLlamada');
-  if (inputIDLlamada) inputIDLlamada.value = '';
-
-  const inputObs = document.getElementById('inputObs');
-  if (inputObs) inputObs.value = '';
-
-  const inputDetalleRechazo = document.getElementById('inputDetalleRechazo');
-  if (inputDetalleRechazo) inputDetalleRechazo.value = '';
-
-  const outputPlantilla = document.getElementById('outputPlantilla');
-  if (outputPlantilla) outputPlantilla.value = '';
-}
-
-/* ==========================================================================
-   GUARDAR EN BLOC Y LIMPIAR
-   ========================================================================== */
-
 function guardarEnBlocDirecto(textoPlantilla) {
   const clienteDataActual = obtenerClienteData();
   const item = {
@@ -799,9 +822,10 @@ function guardarEnBlocDirecto(textoPlantilla) {
 
   listaGestiones.push(item);
   renderizarBloc();
+  actualizarContadorGestiones();
     
-  mostrarToast("💾 ¡Plantilla guardada en el Bloc de Notas!");
-  limpiarTodosLosCampos();
+  mostrarToast("💾 ¡Plantilla guardada en el Bloc!");
+  limpiarColumnas1y2();
 }
 
 function renderizarBloc() {
@@ -835,26 +859,4 @@ function exportarBloc() {
   a.href = URL.createObjectURL(blob);
   a.download = `Registro_Gestiones_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
-}
-
-
-function inicializarTema() {
-  const temaGuardado = localStorage.getItem('themeADP') || 'light';
-  document.documentElement.setAttribute('data-theme', temaGuardado);
-  actualizarBotonTema(temaGuardado);
-}
-
-function actualizarBotonTema(tema) {
-  const icon = document.getElementById('themeIcon');
-  const text = document.getElementById('themeText');
-  
-  if (icon && text) {
-    if (tema === 'dark') {
-      icon.innerText = '☀️';
-      text.innerText = 'Claro';
-    } else {
-      icon.innerText = '🌙';
-      text.innerText = 'Oscuro';
-    }
-  }
 }
