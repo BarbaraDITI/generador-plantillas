@@ -1,166 +1,336 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generador de Plantillas - Mesa Multiskill</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesa Multiskill HITSS - Sistema de Gestión y Plantillas</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Librería Oficial de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-
 <body>
-  <!-- Modal Login / Sesión -->
-  <div class="modal-overlay" id="loginModal" style="display: flex !important; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99999; justify-content: center; align-items: center;">
-    <div class="login-card" style="background: #fff; padding: 25px; border-radius: 8px; max-width: 400px; width: 90%; text-align: center; color: #333;">
-      <h2 style="margin-top:0;">Ingresa tus datos</h2>
-      <p>Configuración de Asesor ADP y Usuario E</p>
+
+    <!-- =====================================================================
+         1. PANTALLA DE AUTENTICACIÓN INTELIGENTE (LOGIN / ACTIVACIÓN / REGISTRO)
+         ===================================================================== -->
+    <div id="pantalla-auth" class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <span class="badge-corp">GLOBAL HITSS PERÚ • MESA MULTISKILL</span>
+                <h2>Control Operativo y Plantillas</h2>
+                <p>Ingresa con tu Código de Empleado asignado</p>
+            </div>
+
+            <!-- PASO 1: VERIFICAR CÓDIGO E -->
+            <div id="paso-codigo">
+                <div class="form-group">
+                    <label for="input-codigo-e">Código de Empleado (Código E)</label>
+                    <input type="text" id="input-codigo-e" placeholder="Ej: E760644 o E-999999" autocomplete="off">
+                </div>
+                <button class="btn btn-primary btn-block" onclick="verificarCodigoE()">Continuar →</button>
+            </div>
+
+            <!-- PASO 2A: USUARIO CON CONTRASEÑA EXISTENTE -->
+            <div id="paso-login" style="display: none;">
+                <div class="user-detected-box">
+                    <strong id="saludo-reconocido"></strong>
+                    <span id="detalle-reconocido" class="sub-badge"></span>
+                </div>
+                <div class="form-group">
+                    <label for="login-pass">Contraseña de Acceso</label>
+                    <input type="password" id="login-pass" placeholder="Ingresa tu contraseña">
+                </div>
+                <button class="btn btn-primary btn-block" onclick="validarPassword()">Ingresar al Sistema</button>
+                <button class="btn-link" onclick="reiniciarLogin()">← Cambiar Código E</button>
+            </div>
+
+            <!-- PASO 2B: PRIMER INGRESO (USUARIO PRECARGADO SIN CLAVE) -->
+            <div id="paso-activar" style="display: none;">
+                <div class="user-detected-box success">
+                    <strong id="saludo-activar"></strong>
+                    <span class="sub-badge">Primer ingreso detectado • Activa tu cuenta</span>
+                </div>
+                <div class="form-group">
+                    <label for="nueva-pass">Crea tu Contraseña Personal</label>
+                    <input type="password" id="nueva-pass" placeholder="Mínimo 4 caracteres">
+                </div>
+                <button class="btn btn-success btn-block" onclick="activarCuenta()">Guardar Contraseña y Entrar</button>
+                <button class="btn-link" onclick="reiniciarLogin()">← Cambiar Código E</button>
+            </div>
+
+            <!-- PASO 2C: ASESOR NUEVO NO PRECARGADO -->
+            <div id="paso-registro-nuevo" style="display: none;">
+                <div class="user-detected-box warning">
+                    <strong>Código no encontrado en padrón</strong>
+                    <span class="sub-badge">Completa tus datos por única vez</span>
+                </div>
+                <div class="form-group">
+                    <label for="reg-nombre">Apellidos y Nombres Completos</label>
+                    <input type="text" id="reg-nombre" placeholder="Ej: DIAZ TINTAYA, BARBARA CRISTINA">
+                </div>
+                <div class="form-group">
+                    <label for="reg-modalidad">Modalidad de Jornada</label>
+                    <select id="reg-modalidad">
+                        <option value="Full Time">Full Time (Meta: 45 SOTs/día)</option>
+                        <option value="Part Time">Part Time (Meta: 25 SOTs/día)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="reg-pass">Crea una Contraseña</label>
+                    <input type="password" id="reg-pass" placeholder="Crea tu clave de acceso">
+                </div>
+                <button class="btn btn-success btn-block" onclick="registrarDesdeCero()">Registrarme y Entrar</button>
+                <button class="btn-link" onclick="reiniciarLogin()">← Cambiar Código E</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         2. APLICACIÓN PRINCIPAL (OCULTA HASTA INICIAR SESIÓN)
+         ===================================================================== -->
+    <div id="app-principal" style="display: none;">
         
-      <div class="login-field" style="margin-bottom: 15px; text-align: left;">
-        <label for="inputNombreADP" style="display:block; font-weight:bold; margin-bottom:5px;">Nombre del ADP</label>
-        <input type="text" id="inputNombreADP" placeholder="Ej: PABLITO CLAVO UN CLAVITO" style="width:100%; padding:10px; box-sizing:border-box;">
-      </div>
+        <!-- BARRA SUPERIOR DE NAVEGACIÓN -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1>Mesa Multiskill HITSS</h1>
+                <span id="badge-rol-activo" class="role-pill">ADP</span>
+            </div>
+            <div class="topbar-right">
+                <button class="btn btn-sm btn-outline" onclick="alternarTema()" id="btn-tema">🌙 Oscuro</button>
+                <span id="info-usuario-topbar" class="user-info-text"></span>
+                <button class="btn btn-sm btn-danger" onclick="cerrarSesion()">Salir</button>
+            </div>
+        </header>
 
-      <div class="login-field" style="margin-bottom: 15px; text-align: left;">
-        <label for="inputUsuarioE" style="display:block; font-weight:bold; margin-bottom:5px;">Usuario E (Ej: E760644)</label>
-        <input type="text" id="inputUsuarioE" placeholder="E123456" maxlength="7" style="width:100%; padding:10px; box-sizing:border-box;">
-      </div>
-      <button type="button" class="btn" id="btnIngresarLogin" style="width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Ingresar</button>
+        <!-- =================================================================
+             VISTA A: OPERACIÓN DEL ASESOR (ADP)
+             ================================================================= -->
+        <main id="vista-adp" style="display: none;">
+            
+            <!-- PANEL DE AVANCE PERSONAL Y RANKING EN TIEMPO REAL -->
+            <section class="adp-kpi-banner">
+                <div class="kpi-pill">
+                    <span class="kpi-label">Mi Avance Hoy</span>
+                    <strong id="adp-avance-hoy">0 / 45 SOTs</strong>
+                </div>
+                <div class="kpi-pill">
+                    <span class="kpi-label">Cumplimiento</span>
+                    <strong id="adp-porcentaje">0%</strong>
+                </div>
+                <div class="kpi-pill">
+                    <span class="kpi-label">Mi Ritmo (Cadencia)</span>
+                    <strong id="adp-cadencia">Sin registros</strong>
+                </div>
+                <div class="kpi-pill highlight">
+                    <span class="kpi-label">Ranking del Turno</span>
+                    <strong id="adp-ranking">Puesto #--</strong>
+                </div>
+            </section>
+
+            <!-- GRID OPERATIVO DE 3 COLUMNAS -->
+            <div class="grid-3-cols">
+                
+                <!-- COLUMNA 1: EXTRACCIÓN TOA + HABILITAR FRANJA -->
+                <div class="col-stack">
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>1. Pegar Texto de TOA / SGA</h3>
+                        </div>
+                        <textarea id="texto-toa" rows="5" placeholder="Pega aquí el detalle completo de la actividad copiado de TOA..."></textarea>
+                        <div class="btn-row">
+                            <button class="btn btn-primary" onclick="procesarTextoTOA()">Procesar Texto</button>
+                            <button class="btn btn-secondary" onclick="limpiarCampos()">Limpiar</button>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>Número SOT</label>
+                                <input type="text" id="campo-sot" placeholder="S/N">
+                            </div>
+                            <div class="form-group">
+                                <label>Teléfono</label>
+                                <input type="text" id="campo-telefono" placeholder="S/N">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Cliente (Titular)</label>
+                            <input type="text" id="campo-cliente" placeholder="Nombre del cliente">
+                        </div>
+                        <div class="form-group">
+                            <label>Contrata</label>
+                            <input type="text" id="campo-contrata" placeholder="Ej: SAVAL / FEBEZA">
+                        </div>
+                    </section>
+
+                    <!-- MÓDULO 4: HABILITAR FRANJA -->
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>4. Formato para Habilitar Franja</h3>
+                        </div>
+                        <div class="form-group">
+                            <label>Supervisor a Cargo (Editable)</label>
+                            <input type="text" id="sup-franja" placeholder="Ej: SUPERVISOR DAVID DONAYRE">
+                        </div>
+                        <textarea id="resultado-franja" rows="4" readonly placeholder="El formato para habilitar franja aparecerá aquí..."></textarea>
+                        <div class="btn-row">
+                            <button class="btn btn-primary" onclick="generarFormatoFranja()">Generar</button>
+                            <button class="btn btn-secondary" onclick="copiarTextoElemento('resultado-franja')">Copiar Formato</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- COLUMNA 2: GENERADOR DINÁMICO DE PLANTILLAS -->
+                <section class="card">
+                    <div class="card-header">
+                        <h3>2. Generar Plantilla Operativa</h3>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Categoría Principal</label>
+                        <select id="cat-principal" onchange="actualizarSubcategorias()">
+                            <option value="CONFIRMA">CONFIRMAR VISITA</option>
+                            <option value="CICLO">CICLO DE LLAMADAS</option>
+                            <option value="REPROGRAMA">REPROGRAMACIÓN</option>
+                            <option value="RECHAZO">RECHAZO TÉCNICO / CLIENTE</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="grupo-submotivo">
+                        <label>Detalle / Submotivo Específico</label>
+                        <select id="sub-motivo"></select>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Fecha de Visita</label>
+                            <input type="date" id="fecha-visita">
+                        </div>
+                        <div class="form-group">
+                            <label>Franja Horaria</label>
+                            <select id="franja-horaria">
+                                <option value="AM0">AM0 (08:00 - 11:00)</option>
+                                <option value="AM1">AM1 (09:00 - 13:00)</option>
+                                <option value="PM1">PM1 (13:00 - 16:00)</option>
+                                <option value="PM2">PM2 (16:00 - 19:00)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ID de Llamada (AICC)</label>
+                        <input type="text" id="id-llamada" placeholder="Ej: 17909701296">
+                    </div>
+
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="check-abrir-forms" checked>
+                        <label for="check-abrir-forms">Abrir formulario corporativo HITSS al guardar</label>
+                    </div>
+
+                    <button class="btn btn-primary btn-block" onclick="generarYGuardarPlantilla()">
+                        ⚡ Generar, Copiar y Registrar SOT
+                    </button>
+
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label>Vista Previa de Plantilla</label>
+                        <textarea id="plantilla-resultado" rows="8" placeholder="La plantilla generada aparecerá aquí..."></textarea>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-secondary" onclick="copiarTextoElemento('plantilla-resultado')">Solo Copiar</button>
+                        <button class="btn btn-success" onclick="abrirMicrosoftForms()">Abrir Forms Manual</button>
+                    </div>
+                </section>
+
+                <!-- COLUMNA 3: REGISTRO DIARIO (BLOC + RESPALDO NUBE) -->
+                <section class="card">
+                    <div class="card-header flex-between">
+                        <h3>3. Registro Diario</h3>
+                        <span id="contador-bloc" class="badge-count">Total: 0</span>
+                    </div>
+                    <div id="lista-bloc" class="bloc-container">
+                        <p class="empty-msg">Aún no hay gestiones registradas hoy.</p>
+                    </div>
+                    <button class="btn btn-dark btn-block" onclick="exportarBlocTXT()">📥 Exportar Bloc (.txt)</button>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- =================================================================
+             VISTA B: DASHBOARD GERENCIAL DEL ADMINISTRADOR (SUPERVISOR)
+             ================================================================= -->
+        <main id="vista-admin" style="display: none;">
+            <section class="card">
+                <div class="admin-toolbar">
+                    <div>
+                        <h2>Panel Gerencial de Productividad y Cumplimiento</h2>
+                        <p class="muted-text">Monitoreo histórico en tiempo real • Sin límite mensual de retención</p>
+                    </div>
+                    <div class="admin-filters">
+                        <select id="admin-modo-filtro" onchange="cambiarModoFiltroAdmin()">
+                            <option value="dia">Por Día Específico</option>
+                            <option value="mes">Consolidado Mensual</option>
+                        </select>
+                        <input type="date" id="admin-filtro-fecha" onchange="cargarDashboardSupervisor()">
+                        <input type="month" id="admin-filtro-mes" style="display: none;" onchange="cargarDashboardSupervisor()">
+                        <button class="btn btn-primary" onclick="cargarDashboardSupervisor()">🔄 Actualizar</button>
+                        <button class="btn btn-success" onclick="exportarReporteAdminCSV()">📊 Exportar Excel (.csv)</button>
+                    </div>
+                </div>
+
+                <!-- TARJETAS KPI GLOBALES -->
+                <div class="admin-kpi-grid">
+                    <div class="stat-box">
+                        <span>Total SOTs Gestionadas</span>
+                        <strong id="kpi-global-sots">0</strong>
+                    </div>
+                    <div class="stat-box">
+                        <span>Asesores en Meta Mínima</span>
+                        <strong id="kpi-global-cumplen">0 / 0</strong>
+                    </div>
+                    <div class="stat-box">
+                        <span>Cadencia Promedio Mesa</span>
+                        <strong id="kpi-global-cadencia">-- min</strong>
+                    </div>
+                    <div class="stat-box">
+                        <span>Registros Enviados a Forms</span>
+                        <strong id="kpi-global-forms">0%</strong>
+                    </div>
+                </div>
+
+                <!-- MATRIZ DE INTERVALOS HORARIOS Y CUMPLIMIENTO (IDÉNTICA AL EXCEL HITSS) -->
+                <div class="table-responsive">
+                    <table class="matrix-table" id="tabla-reporte-admin">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">Ranking</th>
+                                <th rowspan="2">Asesor (ADP)</th>
+                                <th rowspan="2">Ingreso</th>
+                                <th rowspan="2">Modalidad</th>
+                                <th colspan="9">Intervalo Horario (06:00 a 14:00+)</th>
+                                <th rowspan="2">Total / Meta</th>
+                                <th rowspan="2">Estado KPI</th>
+                                <th rowspan="2">Cadencia (Frecuencia)</th>
+                                <th rowspan="2">Forms</th>
+                            </tr>
+                            <tr>
+                                <th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14+</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-admin-body">
+                            <tr><td colspan="17" style="text-align:center;">Cargando datos de Supabase...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
     </div>
-  </div>
 
-  <!-- Modal Advertencia de Duplicado -->
-  <div class="modal-overlay" id="duplicateModal" style="display: none;">
-    <div class="modal-card modal-warning">
-      <h3>⚠️ Plantilla Duplicada Detectada</h3>
-      <p id="duplicateMessage">Esta gestión ya fue agregada anteriormente al Bloc de Notas.</p>
-      <p><strong>¿SEGURO DE QUE DESEA AGREGAR LA PLANTILLA AL BLOC DE NOTAS?</strong></p>
+    <!-- NOTIFICACIÓN FLOTANTE (TOAST) -->
+    <div id="toast" class="toast"></div>
 
-      <div class="modal-actions">
-        <button type="button" class="btn btn-danger" id="btnConfirmarDuplicado">SÍ</button>
-        <button type="button" class="btn btn-secondary" id="btnCancelarDuplicado">NO</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Header con Contador y Botón de Modo Oscuro -->
-  <header>
-    <h2>Mesa Multiskill HITSS - Generador de Plantillas</h2>
-    <div class="user-info">
-      <!-- Contador de Gestiones en Vivo -->
-      <span id="contadorGestiones" style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 15px; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.3); font-weight: bold;">
-        Total: 0
-      </span>
-      <button type="button" class="btn-theme" id="btnToggleTheme">
-        <span id="themeIcon"></span> <span id="themeText">Modo Oscuro</span>
-      </button>
-      <span id="labelUsuario">ADP: No conectado</span>
-      <button type="button" class="btn-logout" id="btnCerrarSesion">Salir / Cambiar</button>
-    </div>
-  </header>
-
-  <!-- Layout Principal -->
-  <div class="container">
-    
-    <!-- Columna 1: Pegar Texto de TOA -->
-    <div class="card">
-      <h3>1. Pegar Texto de TOA</h3>
-      <textarea id="rawInput" placeholder="Pega aquí el detalle completo de la actividad copiado de TOA..."></textarea>
-      
-      <!-- Botones Procesar Texto y Limpiar del mismo tamaño (flex: 1) -->
-      <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn" id="btnProcesarTOA" style="flex: 1;">Procesar Texto</button>
-        <button type="button" class="btn btn-danger" id="btnLimpiarCol1y2" style="flex: 1;">Limpiar</button>
-      </div>
-      
-      <!-- Campos de Vista Previa Editables / Seleccionables -->
-      <div class="data-preview">
-        <div>
-          <label class="lbl-sm" for="pvSOT">SOT:</label>
-          <input type="text" id="pvSOT" placeholder="S/N">
-        </div>
-        <div>
-          <label class="lbl-sm" for="pvTel">Teléfono:</label>
-          <input type="text" id="pvTel" placeholder="S/N">
-        </div>
-        <div style="grid-column: span 2;">
-          <label class="lbl-sm" for="pvCliente">Cliente (Seleccionable / Editable):</label>
-          <input type="text" id="pvCliente" placeholder="Nombre del cliente">
-        </div>
-        <div style="grid-column: span 2;">
-          <label class="lbl-sm" for="pvContrata">Contrata:</label>
-          <input type="text" id="pvContrata" placeholder="SAVAL">
-        </div>
-      </div>
-    </div>
-
-    <!-- Columna 2: Generar Plantilla -->
-    <div class="card">
-      <h3>2. Generar Plantilla</h3>
-      
-      <div class="grid-2">
-        <div>
-          <label class="lbl-sm" for="selectCategoria">Categoría Principal</label>
-          <select id="selectCategoria">
-            <option value="CONFIRMA">CONFIRMAR VISITA</option>
-            <option value="CICLO">CICLO DE LLAMADAS</option>
-            <option value="REPROGRAMAR">REPROGRAMACIÓN</option>
-            <option value="RECHAZOS">RECHAZOS</option>
-            <option value="FUERA_TOA">FUERA DE TOA</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl-sm" for="selectSubcategoria">Plantilla Específica</label>
-          <select id="selectSubcategoria">
-            <!-- Se llena dinámicamente -->
-          </select>
-        </div>
-      </div>
-
-      <!-- Formulario de Variables Dinámicas -->
-      <div id="contenedorDinamico" class="dynamic-inputs">
-        <!-- Campos generados dinámicamente desde JS -->
-      </div>
-
-      <button type="button" class="btn btn-sm" id="btnGenerarPlantilla">Generar Plantilla</button>
-
-      <textarea id="outputPlantilla" readonly placeholder="La plantilla generada aparecerá aquí..."></textarea>
-      
-      <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn btn-secondary" style="flex:1;" id="btnCopiarPlantilla">Copiar Plantilla</button>
-        <button type="button" class="btn btn-success" style="flex:1;" id="btnGuardarBloc">Guardar en Bloc</button>
-      </div>
-    </div>
-
-    <!-- Columna 3: Bloc de Notas / Historial -->
-    <div class="card">
-      <h3>3. Registro Diario (Bloc)</h3>
-      <div class="notepad" id="blocNotasView">Aún no hay registros guardados hoy.</div>
-      <button type="button" class="btn btn-secondary" id="btnExportarBloc">Exportar Bloc (.txt)</button>
-    </div>
-
-    <!-- Columna 4 / Módulo Secundario: Formato Habilitar Franja con Botones Generar y Copiar -->
-    <div class="card" id="cardHabilitarFranja">
-      <h3>4. Formato para Habilitar Franja</h3>
-      <div>
-        <label class="lbl-sm" for="inputSupCargo">Supervisor a Cargo (Editable)</label>
-        <input type="text" id="inputSupCargo" placeholder="Ej: SUPERVISOR JUAN PEREZ">
-      </div>
-
-      <textarea id="outputHabilitarFranja" readonly placeholder="El formato para habilitar franja aparecerá aquí..."></textarea>
-      
-      <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn btn-sm" id="btnGenerarHabilitar" style="flex: 1;">Generar</button>
-        <button type="button" class="btn btn-secondary" id="btnCopiarHabilitar" style="flex: 1;">Copiar Formato</button>
-      </div>
-    </div>
-
-  </div> <!-- Cierre correcto de div.container -->
-
-  <!-- Notificación Flotante (Toast) -->
-  <div id="toastNotification" class="toast">Texto copiado</div>
-
-  <!-- Carga de JavaScript -->
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
-
 </html>
