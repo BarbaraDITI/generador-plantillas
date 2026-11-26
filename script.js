@@ -81,32 +81,46 @@ async function verificarCodigoE() {
     const codigo = document.getElementById('input-codigo-e').value.toUpperCase().trim();
     if (!codigo) return mostrarToast("⚠️ Ingresa tu Usuario E");
 
-    const { data: user, error } = await supabaseClient
-        .from('usuarios')
-        .select('*')
-        .eq('codigo_e', codigo)
-        .single();
+    if (SUPABASE_ANON_KEY.includes('PEGA_AQUI')) {
+        alert("❌ Falta pegar tu clave 'sb_publishable_...' en la línea 5 de script.js");
+        return;
+    }
 
-    document.getElementById('paso-codigo').style.display = 'none';
+    try {
+        const { data: user, error } = await supabaseClient
+            .from('usuarios')
+            .select('*')
+            .eq('codigo_e', codigo)
+            .maybeSingle();
 
-    if (user) {
-        if (!user.activo) {
-            alert("Este usuario se encuentra inactivo. Contacta a tu supervisor.");
-            return reiniciarLogin();
+        if (error) {
+            alert("Error de Supabase: " + error.message);
+            return;
         }
-        usuarioTemporal = user;
-        if (user.password_pin) {
-            document.getElementById('saludo-reconocido').innerText = `Hola, ${user.nombre_completo}`;
-            document.getElementById('detalle-reconocido').innerText = `${user.codigo_e} • ${user.modalidad} • ${user.area}`;
-            document.getElementById('paso-login').style.display = 'block';
+
+        document.getElementById('paso-codigo').style.display = 'none';
+
+        if (user) {
+            if (!user.activo) {
+                alert("Este usuario se encuentra inactivo.");
+                return reiniciarLogin();
+            }
+            usuarioTemporal = user;
+            if (user.password_pin) {
+                document.getElementById('saludo-reconocido').innerText = `Hola, ${user.nombre_completo}`;
+                document.getElementById('detalle-reconocido').innerText = `${user.codigo_e} • ${user.modalidad} • ${user.area}`;
+                document.getElementById('paso-login').style.display = 'block';
+            } else {
+                document.getElementById('saludo-activar').innerText = `¡Bienvenido, ${user.nombre_completo}!`;
+                document.getElementById('detalle-activar').innerText = `${user.codigo_e} • ${user.modalidad} • Área: ${user.area}`;
+                document.getElementById('paso-activar').style.display = 'block';
+            }
         } else {
-            document.getElementById('saludo-activar').innerText = `¡Bienvenido, ${user.nombre_completo}!`;
-            document.getElementById('detalle-activar').innerText = `${user.codigo_e} • ${user.modalidad} • Área: ${user.area}`;
-            document.getElementById('paso-activar').style.display = 'block';
+            usuarioTemporal = { codigo_e: codigo };
+            document.getElementById('paso-registro-nuevo').style.display = 'block';
         }
-    } else {
-        usuarioTemporal = { codigo_e: codigo };
-        document.getElementById('paso-registro-nuevo').style.display = 'block';
+    } catch (err) {
+        alert("Error de conexión: " + err.message);
     }
 }
 
