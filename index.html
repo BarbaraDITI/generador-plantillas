@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mesa Multiskill HITSS - Sistema de Gestión y Plantillas</title>
+    <title>Mesa Multiskill HITSS - Control Operativo y Plantillas</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Librería Oficial de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -18,13 +17,13 @@
             <div class="auth-header">
                 <span class="badge-corp">GLOBAL HITSS PERÚ • MESA MULTISKILL</span>
                 <h2>Control Operativo y Plantillas</h2>
-                <p>Ingresa con tu Código de Empleado asignado</p>
+                <p>Ingresa con tu Usuario E asignado (Ej: E760644)</p>
             </div>
 
             <!-- PASO 1: VERIFICAR CÓDIGO E -->
             <div id="paso-codigo">
                 <div class="form-group">
-                    <label for="input-codigo-e">Código de Empleado (Código E)</label>
+                    <label for="input-codigo-e">Usuario E</label>
                     <input type="text" id="input-codigo-e" placeholder="Ej: E760644 o E-999999" autocomplete="off">
                 </div>
                 <button class="btn btn-primary btn-block" onclick="verificarCodigoE()">Continuar →</button>
@@ -41,56 +40,67 @@
                     <input type="password" id="login-pass" placeholder="Ingresa tu contraseña">
                 </div>
                 <button class="btn btn-primary btn-block" onclick="validarPassword()">Ingresar al Sistema</button>
-                <button class="btn-link" onclick="reiniciarLogin()">← Cambiar Código E</button>
+                <button class="btn-link" onclick="reiniciarLogin()">← Cambiar Usuario E</button>
             </div>
 
-            <!-- PASO 2B: PRIMER INGRESO (USUARIO PRECARGADO SIN CLAVE) -->
+            <!-- PASO 2B: PRIMER INGRESO (USUARIO PRECARGADO EN LEYENDA SIN CLAVE) -->
             <div id="paso-activar" style="display: none;">
                 <div class="user-detected-box success">
                     <strong id="saludo-activar"></strong>
-                    <span class="sub-badge">Primer ingreso detectado • Activa tu cuenta</span>
+                    <span id="detalle-activar" class="sub-badge">Primer ingreso detectado • Activa tu clave</span>
                 </div>
                 <div class="form-group">
                     <label for="nueva-pass">Crea tu Contraseña Personal</label>
                     <input type="password" id="nueva-pass" placeholder="Mínimo 4 caracteres">
                 </div>
                 <button class="btn btn-success btn-block" onclick="activarCuenta()">Guardar Contraseña y Entrar</button>
-                <button class="btn-link" onclick="reiniciarLogin()">← Cambiar Código E</button>
+                <button class="btn-link" onclick="reiniciarLogin()">← Cambiar Usuario E</button>
             </div>
 
             <!-- PASO 2C: ASESOR NUEVO NO PRECARGADO -->
             <div id="paso-registro-nuevo" style="display: none;">
                 <div class="user-detected-box warning">
-                    <strong>Código no encontrado en padrón</strong>
-                    <span class="sub-badge">Completa tus datos por única vez</span>
+                    <strong>Usuario E no encontrado en padrón</strong>
+                    <span class="sub-badge">Completa tus datos operativos por única vez</span>
                 </div>
                 <div class="form-group">
                     <label for="reg-nombre">Apellidos y Nombres Completos</label>
                     <input type="text" id="reg-nombre" placeholder="Ej: DIAZ TINTAYA, BARBARA CRISTINA">
                 </div>
-                <div class="form-group">
-                    <label for="reg-modalidad">Modalidad de Jornada</label>
-                    <select id="reg-modalidad">
-                        <option value="Full Time">Full Time (Meta: 45 SOTs/día)</option>
-                        <option value="Part Time">Part Time (Meta: 25 SOTs/día)</option>
-                    </select>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="reg-modalidad">Modalidad</label>
+                        <select id="reg-modalidad">
+                            <option value="Full Time">Full Time</option>
+                            <option value="Part Time">Part Time</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-area">Área / Cola</label>
+                        <select id="reg-area">
+                            <option value="Programador">Programador</option>
+                            <option value="Migraciónes">Migraciónes</option>
+                            <option value="Laraigo">Laraigo</option>
+                            <option value="Agendador">Agendador</option>
+                            <option value="Repro. Automatica">Repro. Automatica</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="reg-pass">Crea una Contraseña</label>
-                    <input type="password" id="reg-pass" placeholder="Crea tu clave de acceso">
+                    <input type="password" id="reg-pass" placeholder="Mínimo 4 caracteres">
                 </div>
                 <button class="btn btn-success btn-block" onclick="registrarDesdeCero()">Registrarme y Entrar</button>
-                <button class="btn-link" onclick="reiniciarLogin()">← Cambiar Código E</button>
+                <button class="btn-link" onclick="reiniciarLogin()">← Cambiar Usuario E</button>
             </div>
         </div>
     </div>
 
     <!-- =====================================================================
-         2. APLICACIÓN PRINCIPAL (OCULTA HASTA INICIAR SESIÓN)
+         2. APLICACIÓN PRINCIPAL
          ===================================================================== -->
     <div id="app-principal" style="display: none;">
         
-        <!-- BARRA SUPERIOR DE NAVEGACIÓN -->
         <header class="topbar">
             <div class="topbar-left">
                 <h1>Mesa Multiskill HITSS</h1>
@@ -115,8 +125,8 @@
                     <strong id="adp-avance-hoy">0 / 45 SOTs</strong>
                 </div>
                 <div class="kpi-pill">
-                    <span class="kpi-label">Cumplimiento</span>
-                    <strong id="adp-porcentaje">0%</strong>
+                    <span class="kpi-label">Cumplimiento / Efectividad</span>
+                    <strong id="adp-porcentaje">0% (0 Confirm.)</strong>
                 </div>
                 <div class="kpi-pill">
                     <span class="kpi-label">Mi Ritmo (Cadencia)</span>
@@ -128,7 +138,6 @@
                 </div>
             </section>
 
-            <!-- GRID OPERATIVO DE 3 COLUMNAS -->
             <div class="grid-3-cols">
                 
                 <!-- COLUMNA 1: EXTRACCIÓN TOA + HABILITAR FRANJA -->
@@ -137,7 +146,7 @@
                         <div class="card-header">
                             <h3>1. Pegar Texto de TOA / SGA</h3>
                         </div>
-                        <textarea id="texto-toa" rows="5" placeholder="Pega aquí el detalle completo de la actividad copiado de TOA..."></textarea>
+                        <textarea id="texto-toa" rows="5" placeholder="Pega aquí el detalle copiado de TOA..."></textarea>
                         <div class="btn-row">
                             <button class="btn btn-primary" onclick="procesarTextoTOA()">Procesar Texto</button>
                             <button class="btn btn-secondary" onclick="limpiarCampos()">Limpiar</button>
@@ -146,20 +155,50 @@
                         <div class="form-grid-2">
                             <div class="form-group">
                                 <label>Número SOT</label>
-                                <input type="text" id="campo-sot" placeholder="S/N">
+                                <input type="text" id="campo-sot" placeholder="Ej: 92201849">
                             </div>
                             <div class="form-group">
                                 <label>Teléfono</label>
-                                <input type="text" id="campo-telefono" placeholder="S/N">
+                                <input type="text" id="campo-telefono" placeholder="Ej: 987654321">
+                            </div>
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>Departamento</label>
+                                <select id="campo-departamento">
+                                    <option value="LIMA">LIMA</option>
+                                    <option value="AREQUIPA">AREQUIPA</option>
+                                    <option value="LA LIBERTAD">LA LIBERTAD</option>
+                                    <option value="PIURA">PIURA</option>
+                                    <option value="CUSCO">CUSCO</option>
+                                    <option value="ANCASH">ANCASH</option>
+                                    <option value="CAJAMARCA">CAJAMARCA</option>
+                                    <option value="ICA">ICA</option>
+                                    <option value="JUNIN">JUNIN</option>
+                                    <option value="LAMBAYEQUE">LAMBAYEQUE</option>
+                                    <option value="TACNA">TACNA</option>
+                                    <option value="PUNO">PUNO</option>
+                                    <option value="SAN MARTIN">SAN MARTIN</option>
+                                    <option value="HUANUCO">HUANUCO</option>
+                                    <option value="MOQUEGUA">MOQUEGUA</option>
+                                    <option value="UCAYALI">UCAYALI</option>
+                                    <option value="AMAZONAS">AMAZONAS</option>
+                                    <option value="AYACUCHO">AYACUCHO</option>
+                                    <option value="APURIMAC">APURIMAC</option>
+                                    <option value="MADRE DE DIOS">MADRE DE DIOS</option>
+                                    <option value="TUMBES">TUMBES</option>
+                                    <option value="PASCO">PASCO</option>
+                                    <option value="HUANCAVELICA">HUANCAVELICA</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Contrata</label>
+                                <input type="text" id="campo-contrata" placeholder="Ej: SAVAL / FEBEZA">
                             </div>
                         </div>
                         <div class="form-group">
                             <label>Cliente (Titular)</label>
-                            <input type="text" id="campo-cliente" placeholder="Nombre del cliente">
-                        </div>
-                        <div class="form-group">
-                            <label>Contrata</label>
-                            <input type="text" id="campo-contrata" placeholder="Ej: SAVAL / FEBEZA">
+                            <input type="text" id="campo-cliente" placeholder="Nombre completo del titular">
                         </div>
                     </section>
 
@@ -170,7 +209,7 @@
                         </div>
                         <div class="form-group">
                             <label>Supervisor a Cargo (Editable)</label>
-                            <input type="text" id="sup-franja" placeholder="Ej: SUPERVISOR DAVID DONAYRE">
+                            <input type="text" id="sup-franja" placeholder="Ej: SUPERVISOR EN TURNO">
                         </div>
                         <textarea id="resultado-franja" rows="4" readonly placeholder="El formato para habilitar franja aparecerá aquí..."></textarea>
                         <div class="btn-row">
@@ -180,39 +219,53 @@
                     </section>
                 </div>
 
-                <!-- COLUMNA 2: GENERADOR DINÁMICO DE PLANTILLAS -->
+                <!-- COLUMNA 2: GENERADOR DE PLANTILLAS (EXACTO AL FORMULARIO HITSS) -->
                 <section class="card">
                     <div class="card-header">
-                        <h3>2. Generar Plantilla Operativa</h3>
+                        <h3>2. Registrar Gestión y Plantilla</h3>
                     </div>
 
-                    <div class="form-group">
-                        <label>Categoría Principal</label>
-                        <select id="cat-principal" onchange="actualizarSubcategorias()">
-                            <option value="CONFIRMA">CONFIRMAR VISITA</option>
-                            <option value="CICLO">CICLO DE LLAMADAS</option>
-                            <option value="REPROGRAMA">REPROGRAMACIÓN</option>
-                            <option value="RECHAZO">RECHAZO TÉCNICO / CLIENTE</option>
-                        </select>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Resultado (GESTION)</label>
+                            <select id="cat-principal" onchange="actualizarSubcategorias()">
+                                <option value="CONFIRMO">CONFIRMO</option>
+                                <option value="NO CONTESTA">NO CONTESTA</option>
+                                <option value="REPROGRAMADO">REPROGRAMADO</option>
+                                <option value="RECHAZADO">RECHAZADO</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Cola (SOT GESTIONADA MANUAL)</label>
+                            <select id="cola-manual">
+                                <option value="PROGRAMACIONES D+1">PROGRAMACIONES D+1</option>
+                                <option value="MIGRACIONES">MIGRACIONES</option>
+                                <option value="PREDICTIVO">PREDICTIVO</option>
+                                <option value="PM3">PM3</option>
+                                <option value="REPROAUTOMATICA">REPROAUTOMATICA</option>
+                                <option value="AM0">AM0</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="form-group" id="grupo-submotivo">
-                        <label>Detalle / Submotivo Específico</label>
+                        <label>Motivo / Tipificación Detallada</label>
                         <select id="sub-motivo"></select>
                     </div>
 
                     <div class="form-grid-2">
                         <div class="form-group">
-                            <label>Fecha de Visita</label>
+                            <label>Fecha que desea Cliente</label>
                             <input type="date" id="fecha-visita">
                         </div>
                         <div class="form-group">
                             <label>Franja Horaria</label>
                             <select id="franja-horaria">
-                                <option value="AM0">AM0 (08:00 - 11:00)</option>
-                                <option value="AM1">AM1 (09:00 - 13:00)</option>
-                                <option value="PM1">PM1 (13:00 - 16:00)</option>
-                                <option value="PM2">PM2 (16:00 - 19:00)</option>
+                                <option value="AM0">AM0</option>
+                                <option value="AM1" selected>AM1</option>
+                                <option value="AM2">AM2</option>
+                                <option value="PM1">PM1</option>
+                                <option value="PM2">PM2</option>
                             </select>
                         </div>
                     </div>
@@ -224,7 +277,7 @@
 
                     <div class="checkbox-row">
                         <input type="checkbox" id="check-abrir-forms" checked>
-                        <label for="check-abrir-forms">Abrir formulario corporativo HITSS al guardar</label>
+                        <label for="check-abrir-forms">Abrir Microsoft Forms corporativo al guardar</label>
                     </div>
 
                     <button class="btn btn-primary btn-block" onclick="generarYGuardarPlantilla()">
@@ -258,16 +311,24 @@
         </main>
 
         <!-- =================================================================
-             VISTA B: DASHBOARD GERENCIAL DEL ADMINISTRADOR (SUPERVISOR)
+             VISTA B: DASHBOARD GERENCIAL (REPLICA DINAMICA + GESTION DE TU EXCEL)
              ================================================================= -->
         <main id="vista-admin" style="display: none;">
             <section class="card">
                 <div class="admin-toolbar">
                     <div>
-                        <h2>Panel Gerencial de Productividad y Cumplimiento</h2>
-                        <p class="muted-text">Monitoreo histórico en tiempo real • Sin límite mensual de retención</p>
+                        <h2>Panel Gerencial de Productividad y Contactabilidad</h2>
+                        <p class="muted-text">Matriz horaria (07:00 a 20:00+), efectividad y cadencia en tiempo real</p>
                     </div>
                     <div class="admin-filters">
+                        <select id="admin-filtro-area" onchange="cargarDashboardSupervisor()">
+                            <option value="TODAS">Todas las Áreas</option>
+                            <option value="Programador">Programador</option>
+                            <option value="Migraciónes">Migraciónes</option>
+                            <option value="Laraigo">Laraigo</option>
+                            <option value="Agendador">Agendador</option>
+                            <option value="Repro. Automatica">Repro. Automatica</option>
+                        </select>
                         <select id="admin-modo-filtro" onchange="cambiarModoFiltroAdmin()">
                             <option value="dia">Por Día Específico</option>
                             <option value="mes">Consolidado Mensual</option>
@@ -286,6 +347,10 @@
                         <strong id="kpi-global-sots">0</strong>
                     </div>
                     <div class="stat-box">
+                        <span>% Confirmados / Contactabilidad</span>
+                        <strong id="kpi-global-efectividad">0% / 0%</strong>
+                    </div>
+                    <div class="stat-box">
                         <span>Asesores en Meta Mínima</span>
                         <strong id="kpi-global-cumplen">0 / 0</strong>
                     </div>
@@ -293,33 +358,32 @@
                         <span>Cadencia Promedio Mesa</span>
                         <strong id="kpi-global-cadencia">-- min</strong>
                     </div>
-                    <div class="stat-box">
-                        <span>Registros Enviados a Forms</span>
-                        <strong id="kpi-global-forms">0%</strong>
-                    </div>
                 </div>
 
-                <!-- MATRIZ DE INTERVALOS HORARIOS Y CUMPLIMIENTO (IDÉNTICA AL EXCEL HITSS) -->
+                <!-- MATRIZ DE INTERVALOS HORARIOS Y DESGLOSE DE GESTIÓN -->
                 <div class="table-responsive">
                     <table class="matrix-table" id="tabla-reporte-admin">
                         <thead>
                             <tr>
-                                <th rowspan="2">Ranking</th>
-                                <th rowspan="2">Asesor (ADP)</th>
-                                <th rowspan="2">Ingreso</th>
+                                <th rowspan="2">#</th>
+                                <th rowspan="2">Asesor (NOMBRE2)</th>
+                                <th rowspan="2">Antigüedad</th>
                                 <th rowspan="2">Modalidad</th>
-                                <th colspan="9">Intervalo Horario (06:00 a 14:00+)</th>
+                                <th rowspan="2">Área</th>
+                                <th colspan="14">Intervalo Horario (07:00 a 20:00+)</th>
+                                <th colspan="4">Desglose Gestión</th>
                                 <th rowspan="2">Total / Meta</th>
                                 <th rowspan="2">Estado KPI</th>
-                                <th rowspan="2">Cadencia (Frecuencia)</th>
-                                <th rowspan="2">Forms</th>
+                                <th rowspan="2">Cadencia</th>
                             </tr>
                             <tr>
-                                <th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14+</th>
+                                <th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th>
+                                <th>14</th><th>15</th><th>16</th><th>17</th><th>18</th><th>19</th><th>20+</th>
+                                <th>CONF</th><th>NO CONT</th><th>RECH</th><th>REPRO</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-admin-body">
-                            <tr><td colspan="17" style="text-align:center;">Cargando datos de Supabase...</td></tr>
+                            <tr><td colspan="26" style="text-align:center;">Cargando datos de Supabase...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -328,9 +392,7 @@
 
     </div>
 
-    <!-- NOTIFICACIÓN FLOTANTE (TOAST) -->
     <div id="toast" class="toast"></div>
-
     <script src="script.js"></script>
 </body>
 </html>
